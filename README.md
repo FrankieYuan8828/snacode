@@ -247,13 +247,6 @@ src/
 
 - 邮箱：frankieyuan.yyd@gmail.com
 - GitHub：[https://github.com/FrankieYuan8828](https://github.com/FrankieYuan8828)
-
----
-
-## 贡献者
-
-感谢所有为 Snacode 做出贡献的人！完整名单请查看 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
-
 ---
 
 ## 安全说明
