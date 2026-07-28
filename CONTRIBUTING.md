@@ -19,7 +19,7 @@ npm run build
 
 ## Guidelines
 
-- Keep pi itself responsible for agent behavior, tools, sessions, model calls, and context management.
+- Keep sd itself responsible for agent behavior, tools, sessions, model calls, and context management.
 - Prefer RPC integration over reimplementing pi internals.
 - Avoid directly mutating pi session JSONL files.
 - Keep Electron IPC narrow and typed through `src/shared`.
