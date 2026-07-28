@@ -12,7 +12,6 @@
 - **me9rez** ([@me9rez](https://github.com/me9rez)) — 清理依赖、SkillManager 软连接扫描与循环检测 (#86, #69)
 - **bfzha** ([@bfzha](https://github.com/bfzha)) — VS Code 风格 Git 面板 & 复杂工作流支持 (#68)
 - **Lopution** ([@Lopution](https://github.com/Lopution)) — 跨桌面边界 WSL 路径处理 (#84)
-- **buaassp** ([@buaassp](https://github.com/buaassp)) — 隐藏内部 pi-subagent 会话 (#57)
 
 以及所有提交 Issue、反馈建议和帮助推广的用户。
 
