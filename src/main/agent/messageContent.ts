@@ -6,7 +6,7 @@ function stripCpaCompletionMarker(text: string): string {
 }
 
 /**
- * 将 pi/RPC 的 content 字段转换为桌面端消息正文。
+ * 将 sd/RPC 的 content 字段转换为桌面端消息正文。
  * 兼容部分 Anthropic-compatible 服务把同一段 assistant 文本拆成多个 {type:"text"}
  * content item 的情况：这些 item 只是流式分片，不代表 Markdown 段落边界，不能用换行拼接，
  * 否则中文会被渲染成一行一个短片段的“竖排”消息。
@@ -50,7 +50,7 @@ export function extractMessageText(content: unknown): string {
 }
 
 /**
- * 从 pi/RPC content 数组中提取 thinking 块的纯文本（不含标签包裹）。
+ * 从 sd/RPC content 数组中提取 thinking 块的纯文本（不含标签包裹）。
  * 与 AgentManager.extractThinking 逻辑一致，用于会话文件直接读取场景。
  */
 export function extractThinkingRaw(content: unknown): string {

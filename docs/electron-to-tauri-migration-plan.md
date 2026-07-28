@@ -80,18 +80,18 @@ Electron（当前）                                       Tauri（目标）
 | **EditorDetector** | `src/main/editors/EditorDetector.ts` | 注册表/文件检测 → Rust 直读 |
 | **ConfigManager** | `src/main/config/ConfigManager.ts` | 读/写 JSON 文件 |
 | **SkillManager** | `src/main/skills/SkillManager.ts` | 文件系统操作 |
-| **ExtensionManager** | `src/main/extensions/ExtensionManager.ts` | 文件系统 + pi CLI 子进程调用 |
+| **ExtensionManager** | `src/main/extensions/ExtensionManager.ts` | 文件系统 + sd CLI 子进程调用 |
 | **ProjectStore** | `src/main/projects/ProjectStore.ts` | 文件系统 + store |
 | **WebServiceManager** | `src/main/web/WebServiceManager.ts` | `tiny_http` / `axum` crate 嵌入 HTTP 服务 |
-| **PiLocator** | `src/main/pi/PiLocator.ts` | 环境变量/注册表检查 |
+| **SdLocator** | `src/main/agent/SdLocator.ts` | 环境变量/注册表检查 |
 | **RpcLogger** | `src/main/logging/RpcLogger.ts` | 文件追加写 |
 
 ### 🟡 中等难度（需较多注意）
 
 | 模块 | 位置 | 挑战 |
 |---|---|---|
-| **AgentManager** | `src/main/pi/AgentManager.ts` | 子进程管理（spawn / kill / stdin/stdout）→ `tauri-plugin-shell` 的 Command API + 自定义 RPC 通信（stdin JSON-RPC, stdout 流式解析），状态管理（stop / restart / compact 等状态机） |
-| **PiRpcClient** | `src/main/pi/PiRpcClient.ts` | JSON-RPC over stdin/stdout → 需要 Rust 的 `serde_json` 流式读取 + 请求/响应匹配，超时控制 |
+| **AgentManager** | `src/main/agent/AgentManager.ts` | 子进程管理（spawn / kill / stdin/stdout）→ `tauri-plugin-shell` 的 Command API + 自定义 RPC 通信（stdin JSON-RPC, stdout 流式解析），状态管理（stop / restart / compact 等状态机） |
+| **SdRpcClient** | `src/main/agent/SdRpcClient.ts` | JSON-RPC over stdin/stdout → 需要 Rust 的 `serde_json` 流式读取 + 请求/响应匹配，超时控制 |
 | **TelemetryService** | `src/main/telemetry/TelemetryService.ts` | PostHog HTTP API 封装 |
 | **ProjectResourceManager** | `src/main/projects/ProjectResourceManager.ts` | 文件系统操作 + AGENTS.md 管理 |
 | **DesktopProxy** | `src/main/settings/DesktopProxy.ts` | 系统代理设置（不同 OS API 不同） |

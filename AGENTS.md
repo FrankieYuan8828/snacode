@@ -2,7 +2,7 @@
 
 ## 项目简介
 
-Snacode 是一个面向本地开发工作的 Electron 桌面应用，用于在多个项目目录之间管理和运行 pi RPC Agent。应用提供多项目工作区、会话时间线、历史会话恢复、文件抽屉、Git 面板、模型选择、工具调用展示、内置浏览器、中文提示词精选、技能/扩展商店以及打包发布能力，目标是让用户可以在桌面端更稳定地管理多个 pi 编码助手会话。
+Snacode 是一个面向本地开发工作的 Electron 桌面应用，用于在多个项目目录之间管理和运行 sd RPC Agent。应用提供多项目工作区、会话时间线、历史会话恢复、文件抽屉、Git 面板、模型选择、工具调用展示、内置浏览器、中文提示词精选、技能/扩展商店以及打包发布能力，目标是让用户可以在桌面端更稳定地管理多个 sd 编码助手会话。
 
 技术栈：Electron 38 + React 19 + TypeScript + Vite。
 
@@ -11,7 +11,7 @@ Snacode 是一个面向本地开发工作的 Electron 桌面应用，用于在�
 ```
 src/
 ├── main/              # Electron 主进程
-│   ├── pi/            # pi RPC 进程管理、消息解析
+│   ├── agent/         # sd RPC 进程管理、消息解析
 │   ├── sessions/      # 会话扫描、导入、摘要缓存
 │   ├── git/           # GitService（status/diff/commit/cherry-pick 等）
 │   ├── prompts/       # PromptManager（本地模板）+ XuePromptManager（SQLite 中文精选）
@@ -164,7 +164,7 @@ height: min(850px, calc(100vh - 48px));
 
 处理 GitHub Issue 或外部反馈缺陷时，应按以下分支流程进行，避免直接在 `main` 上修复：
 
-1. 从最新 `main` 创建短修复分支，命名建议为 `fix/issue-<number>-<short-description>`，例如 `fix/issue-1-windows-pi-path-spaces`。
+1. 从最新 `main` 创建短修复分支，命名建议为 `fix/issue-<number>-<short-description>`，例如 `fix/issue-1-windows-sd-path-spaces`。
 2. 修复前先定位根因，记录影响范围；如果问题涉及启动、环境检测、会话恢复等核心流程，应同步检查相邻路径是否存在同类问题。
 3. 修复提交应聚焦单一问题，提交信息建议使用 `fix:` 前缀，并在 PR 或提交说明中关联 issue。
 4. 推送修复分支后创建 PR，PR 描述需包含问题原因、修复摘要、验证命令，并使用 `Closes #<number>` 让合并后自动关闭 issue。

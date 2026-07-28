@@ -1,4 +1,4 @@
-import type { SnacodeDesktopApi } from "../../preload";
+﻿import type { SnacodeDesktopApi } from "../../preload";
 import type {
 	AgentTab,
 	ChatMessage,

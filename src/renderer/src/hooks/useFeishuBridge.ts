@@ -2,7 +2,7 @@
  * useFeishuBridge — 飞书桥接状态 Hook
  *
  * 封装 IPC 调用 + 状态订阅，供前端组件使用。
- * 通过 window.piDesktop.feishu.* API 与主进程通信。
+ * 通过 window.snacodeDesktop.feishu.* API 与主进程通信。
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,7 +15,7 @@ import type {
 	FeishuTestResult,
 } from "../../../shared/types";
 
-type PiDesktopFeishuApi = {
+type SnacodeDesktopFeishuApi = {
 	connect: (input: FeishuConnectInput) => Promise<{ success: boolean; message: string }>;
 	/** 临时连接（不保存配置），返回 botInfo 用于后续保存 */
 	connectTemp: (input: FeishuConnectInput) => Promise<{ success: boolean; message: string; botInfo?: { id: string; name: string } }>;
@@ -39,8 +39,8 @@ type PiDesktopFeishuApi = {
 	sessionBotSet: (agentId: string, botId: string | null) => Promise<{ success: boolean; message?: string; chatId?: string }>;
 };
 
-function getApi(): PiDesktopFeishuApi | undefined {
-	return (window as unknown as { piDesktop?: { feishu?: PiDesktopFeishuApi } }).piDesktop?.feishu;
+function getApi(): SnacodeDesktopFeishuApi | undefined {
+	return (window as unknown as { snacodeDesktop?: { feishu?: SnacodeDesktopFeishuApi } }).snacodeDesktop?.feishu;
 }
 
 export function useFeishuBridge() {

@@ -3,23 +3,23 @@ layout: home
 lang: en
 hero:
   name: Snacode
-  text: Desktop Workbench for pi AI Coding Agents
-  tagline: Manage local pi coding assistant sessions, configs, Git, and terminal in a unified desktop workspace for Windows, macOS, and Linux.
+  text: Desktop Workbench for sd AI Coding Agents
+  tagline: Manage local sd coding assistant sessions, configs, Git, and terminal in a unified desktop workspace for Windows, macOS, and Linux.
   actions:
     - theme: brand
       text: Download Latest
-      link: https://github.com/ayuayue/Snacode/releases
+      link: https://github.com/FrankieYuan8828/snacode/releases
     - theme: alt
       text: Get Started
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/ayuayue/Snacode
+      link: https://github.com/FrankieYuan8828/snacode
 ---
 
 ## Features
 
-- **Multi-Project Workspace** — Add, search, drag-sort, and switch local project folders. Run multiple pi agents simultaneously with per-project isolation.
+- **Multi-Project Workspace** — Add, search, drag-sort, and switch local project folders. Run multiple sd Agents simultaneously with per-project isolation.
 - **Session History & Restore** — Restore previous conversations, browse tool calls and answers by timeline, and review file changes in past sessions. Import local Codex and Claude sessions.
 - **Git Integration** — Real-time branch display and switching, VS Code-style 3-panel view (Changes/History/Compare), AI commit message generation, branch graph visualization, cherry-pick/revert/reset/drop, file tree with Git status, worktree support.
 - **Session Reference (&)** — Type & in composer to search and reference past sessions across the same project. Inject full context or select specific messages.

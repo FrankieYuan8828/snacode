@@ -24,7 +24,7 @@ type ParsedClaudeSession = {
 
 export class ClaudeSessionImporter {
 	private readonly claudeRoot = join(app.getPath("home"), ".claude", "projects");
-	private readonly piRoot = join(app.getPath("home"), ".pi", "agent", "sessions");
+	private readonly sdRoot = join(app.getPath("home"), ".sd", "agent", "sessions");
 
 	async scan(projectPath: string): Promise<ClaudeSessionSummary[]> {
 		const projectDir = this.getClaudeProjectDir(projectPath);
@@ -392,7 +392,7 @@ export class ClaudeSessionImporter {
 	}
 
 	private getProjectSessionDir(projectPath: string) {
-		return join(this.piRoot, this.safePathToken(projectPath));
+		return join(this.sdRoot, this.safePathToken(projectPath));
 	}
 
 	private safePathToken(path: string) {

@@ -38,7 +38,7 @@ type ParsedOpenCodeSession = {
 
 export class OpenCodeSessionImporter {
 	private readonly openCodeDb = join(app.getPath("home"), ".local", "share", "opencode", "opencode.db");
-	private readonly piRoot = join(app.getPath("home"), ".pi", "agent", "sessions");
+	private readonly sdRoot = join(app.getPath("home"), ".sd", "agent", "sessions");
 
 	async scan(projectPath: string): Promise<OpenCodeSessionSummary[]> {
 		if (!existsSync(this.openCodeDb)) return [];
@@ -68,7 +68,7 @@ export class OpenCodeSessionImporter {
 			const existing = await this.readImportMeta(targetPath);
 			const converted = this.convertToPiSession(projectPath, parsed);
 			await mkdir(this.getProjectSessionDir(projectPath), { recursive: true });
-			// OpenCode 历史集中存放在 SQLite 中；导入时只生成 pi 可读副本，不修改原始数据库。
+			// OpenCode 历史集中存放在 SQLite 中；导入时只生成 sd 可读副本，不修改原始数据库。
 			await writeFile(targetPath, converted.raw, "utf8");
 			return {
 				id: String(parsed.meta.id),
@@ -320,7 +320,7 @@ export class OpenCodeSessionImporter {
 	}
 
 	private getProjectSessionDir(projectPath: string) {
-		return join(this.piRoot, this.safePathToken(projectPath));
+		return join(this.sdRoot, this.safePathToken(projectPath));
 	}
 
 	private safePathToken(path: string) {

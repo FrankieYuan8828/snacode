@@ -9,8 +9,8 @@ import vm from "node:vm";
 
 const require = createRequire(import.meta.url);
 
-function loadPiLocatorModule(platform = process.platform) {
-	const source = readFileSync("src/main/pi/PiLocator.ts", "utf8");
+function loadSdLocatorModule(platform = process.platform) {
+	const source = readFileSync("src/main/agent/SdLocator.ts", "utf8");
 	const { outputText } = ts.transpileModule(source, {
 		compilerOptions: {
 			module: ts.ModuleKind.CommonJS,
@@ -35,24 +35,24 @@ function loadPiLocatorModule(platform = process.platform) {
 	};
 	sandbox.global = sandbox;
 	vm.runInNewContext(outputText, sandbox, {
-		filename: "PiLocator.ts",
+		filename: "SdLocator.ts",
 	});
 	return sandbox.exports;
 }
 
-test("uses the pi shim bin directory as PATH prefix on macOS when node is beside the shim", () => {
+test("uses the sd shim bin directory as PATH prefix on macOS when node is beside the shim", () => {
 	const root = join(tmpdir(), `snacode-locator-${process.pid}-${Date.now()}`);
 	const binDir = join(root, ".nvm", "versions", "node", "v22.22.1", "bin");
 	mkdirSync(binDir, { recursive: true });
-	const piPath = join(binDir, "pi");
-	writeFileSync(piPath, "#!/usr/bin/env node\n", "utf8");
+	const sdPath = join(binDir, "sd");
+	writeFileSync(sdPath, "#!/usr/bin/env node\n", "utf8");
 	writeFileSync(join(binDir, "node"), "", "utf8");
 
 	try {
-		const { PiLocator } = loadPiLocatorModule("darwin");
-		const invocation = new PiLocator().createInvocation(piPath, ["--version"]);
+		const { SdLocator } = loadSdLocatorModule("darwin");
+		const invocation = new SdLocator().createInvocation(sdPath, ["--version"]);
 
-		assert.equal(invocation.command, piPath);
+		assert.equal(invocation.command, sdPath);
 		assert.deepEqual(invocation.args, ["--version"]);
 		assert.equal(invocation.shell, false);
 		assert.equal(invocation.pathPrefix, binDir);
@@ -61,17 +61,17 @@ test("uses the pi shim bin directory as PATH prefix on macOS when node is beside
 	}
 });
 
-test("uses the pi cmd shim bin directory as PATH prefix on Windows when node.exe is beside the shim", () => {
+test("uses the sd cmd shim bin directory as PATH prefix on Windows when node.exe is beside the shim", () => {
 	const root = join(tmpdir(), `snacode-locator-win-${process.pid}-${Date.now()}`);
 	const binDir = join(root, "nvm", "v22.22.1");
 	mkdirSync(binDir, { recursive: true });
-	const piPath = join(binDir, "pi.cmd");
-	writeFileSync(piPath, "@echo off\r\nnode \"%~dp0\\node_modules\\pi\\bin.js\" %*\r\n", "utf8");
+	const sdPath = join(binDir, "sd.cmd");
+	writeFileSync(sdPath, "@echo off\r\nnode \"%~dp0\\node_modules\\sd\\bin.js\" %*\r\n", "utf8");
 	writeFileSync(join(binDir, "node.exe"), "", "utf8");
 
 	try {
-		const { PiLocator } = loadPiLocatorModule("win32");
-		const invocation = new PiLocator().createInvocation(piPath, ["--version"]);
+		const { SdLocator } = loadSdLocatorModule("win32");
+		const invocation = new SdLocator().createInvocation(sdPath, ["--version"]);
 
 		assert.match(invocation.command.toLowerCase(), /cmd\.exe$/);
 		assert.equal(JSON.stringify(invocation.args.slice(0, 3)), JSON.stringify(["/d", "/s", "/c"]));
@@ -83,17 +83,17 @@ test("uses the pi cmd shim bin directory as PATH prefix on Windows when node.exe
 	}
 });
 
-test("places an explicit WSL cwd before the pi command", () => {
-	const { PiLocator } = loadPiLocatorModule("win32");
-	const invocation = new PiLocator().createInvocation(
-		"wsl://Ubuntu-24.04/root/pi",
+test("places an explicit WSL cwd before the sd command", () => {
+	const { SdLocator } = loadSdLocatorModule("win32");
+	const invocation = new SdLocator().createInvocation(
+		"wsl://Ubuntu-24.04/root/sd",
 		["--mode", "rpc"],
 		{ wslCwd: "/root/ba cli" },
 	);
 
 	assert.deepEqual(
 		Array.from(invocation.args),
-		["-d", "Ubuntu-24.04", "-u", "root", "--cd", "/root/ba cli", "pi", "--mode", "rpc"],
+		["-d", "Ubuntu-24.04", "-u", "root", "--cd", "/root/ba cli", "sd", "--mode", "rpc"],
 	);
 	assert.equal(invocation.wsl.distro, "Ubuntu-24.04");
 });

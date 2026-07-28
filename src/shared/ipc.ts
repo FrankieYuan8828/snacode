@@ -47,7 +47,7 @@ export const ipcChannels = {
 	openCodeSessionsImport: "opencode-sessions:import",
 	settingsGet: "settings:get",
 	settingsUpdate: "settings:update",
-	settingsTestPiProxy: "settings:test-pi-proxy",
+	settingsTestSdProxy: "settings:test-sd-proxy",
 	settingsApplyWindow: "settings:apply-window",
 	skillsList: "skills:list",
 	skillsCreate: "skills:create",
@@ -112,18 +112,18 @@ export const ipcChannels = {
 	gitPush: "git:push",
 	gitPull: "git:pull",
 	gitFetch: "git:fetch",
-	piCheck: "pi:check",
-	piCheckCustom: "pi:check-custom",
+	sdCheck: "sd:check",
+	sdCheckCustom: "sd:check-custom",
 	/** 获取已安装的 WSL 发行版列表（仅 Windows） */
 	wslListDistros: "wsl:list-distros",
-	/** 验证 WSL 连接：检查 distro + user 是否可达，以及 pi 是否已安装 */
+	/** 验证 WSL 连接：检查 distro + user 是否可达，以及 sd 是否已安装 */
 	wslValidateConnection: "wsl:validate-connection",
-	piUpdateCheck: "pi:update-check",
-	piUpdate: "pi:update",
+	sdUpdateCheck: "sd:update-check",
+	sdUpdate: "sd:update",
 	/** 在系统终端中执行安装命令（npm install）并返回结果 */
-	piExecInstall: "pi:exec-install",
+	sdExecInstall: "sd:exec-install",
 	/** 检查 npm 是否可用 */
-	piCheckNpm: "pi:check-npm",
+	sdCheckNpm: "sd:check-npm",
 	appInfo: "app:info",
 	appPreferredSystemLanguages: "app:preferred-system-languages",
 	appCheckUpdate: "app:check-update",
@@ -195,10 +195,15 @@ export const ipcChannels = {
 	agentsUiRequest: "agents:ui-request",
 	/** 渲染进程 → 主进程，传递用户在 UI 请求中的响应（选中的选项、输入的文本等） */
 	agentsUiResponse: "agents:ui-response",
-	/** 项目信任确认：主进程 → 渲染进程，启动 Agent 前请求用户对含 .pi 资源的项目做信任决策 */
+	/** 项目信任确认：主进程 → 渲染进程，启动 Agent 前请求用户对含 .sd 资源的项目做信任决策 */
 	agentsTrustRequest: "agents:trust-request",
 	/** 项目信任确认：渲染进程 → 主进程，回传用户的信任选择（trust-remember/trust-session/deny） */
 	agentsTrustResponse: "agents:trust-response",
+
+	/** 执行 MCP 工具调用：渲染进程 → 主进程，直接调用 MCP 工具 */
+	agentsInvokeTool: "agents:invoke-tool",
+	/** 执行 Skill 调用：渲染进程 → 主进程，直接执行指定 skill */
+	agentsInvokeSkill: "agents:invoke-skill",
 
 	configGetModels: "config:get-models",
 	configGetAuth: "config:get-auth",
@@ -252,7 +257,7 @@ export const ipcChannels = {
 	feishuMessages: "feishu:messages",
 	feishuQrCode: "feishu:qr-code",
 	feishuConnectByBot: "feishu:connect-by-bot",
-	/** Pi 创建会话时触发飞书自动拉群 */
+	/** Sd 创建会话时触发飞书自动拉群 */
 	feishuAutoGroup: "feishu:auto-group",
 	/** 获取指定 Agent 绑定的飞书 Bot ID */
 	feishuSessionBotGet: "feishu:session-bot-get",
@@ -317,4 +322,26 @@ export const ipcChannels = {
 	dialogPickFiles: "dialog:pick-files",
 	/** 打开图片选择器并读取图片内容 */
 	dialogPickImages: "dialog:pick-images",
+
+	// ===== ALGS 系统 =====
+	/** 提交 ALGS 任务 */
+	algsSubmitTask: "algs:submit-task",
+	/** 获取 ALGS 任务状态 */
+	algsGetTaskStatus: "algs:get-task-status",
+	/** 获取 ALGS 任务列表 */
+	algsGetTasks: "algs:get-tasks",
+	/** 获取技能卡列表 */
+	algsGetSkillCards: "algs:get-skill-cards",
+	/** 保存技能卡 */
+	algsSaveSkillCard: "algs:save-skill-card",
+	/** 删除技能卡 */
+	algsDeleteSkillCard: "algs:delete-skill-card",
+	/** 下载 LoRA 文件 */
+	algsDownloadLora: "algs:download-lora",
+	/** 获取 LoRA 列表 */
+	algsGetLoraList: "algs:get-lora-list",
+	/** 触发 LoRA 微调任务 */
+	algsTriggerTraining: "algs:trigger-training",
+	/** 获取训练任务列表 */
+	algsGetTrainingJobs: "algs:get-training-jobs",
 } as const;

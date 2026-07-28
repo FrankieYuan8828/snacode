@@ -5,22 +5,22 @@
   "private": true,
   "license": "MIT",
   "author": {
-    "name": "ayuayue",
-    "email": "ayuayue@users.noreply.github.com"
+    "name": "FrankieYuan8828",
+    "email": "frankieyuan.yyd@gmail.com"
   },
   "contributors": [
     {
-      "name": "1900EasonJin",
-      "url": "https://github.com/1900EasonJin"
+      "name": "FrankieYuan8828",
+      "url": "https://github.com/FrankieYuan8828"
     }
   ],
-  "homepage": "https://github.com/ayuayue/Snacode#readme",
+  "homepage": "https://github.com/FrankieYuan8828/Snacode#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ayuayue/Snacode.git"
+    "url": "git+https://github.com/FrankieYuan8828/Snacode.git"
   },
   "bugs": {
-    "url": "https://github.com/ayuayue/Snacode/issues"
+    "url": "https://github.com/FrankieYuan8828/Snacode/issues"
   },
   "keywords": [
     "snacode",
@@ -77,6 +77,10 @@
   },
   "dependencies": {
     "@astron-team/skillhub": "^0.1.8",
+    "@snacode/sd-coding-agent": "npm:@earendil-works/pi-coding-agent@^0.82.1",
+    "@snacode/sd-agent-core": "npm:@earendil-works/pi-agent-core@^0.82.1",
+    "@snacode/sd-ai": "npm:@earendil-works/pi-ai@^0.82.1",
+    "@snacode/sd-tui": "npm:@earendil-works/pi-tui@^0.82.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@larksuiteoapi/node-sdk": "^1.67.0",
     "@radix-ui/react-dialog": "^1.1.19",

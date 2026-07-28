@@ -7,7 +7,7 @@ import {
 } from "../../../shared/types";
 import { t } from "../i18n";
 
-const api: SnacodeDesktopApi = (window as unknown as { piDesktop: SnacodeDesktopApi }).piDesktop;
+const api: SnacodeDesktopApi = (window as unknown as { snacodeDesktop: SnacodeDesktopApi }).snacodeDesktop;
 
 export function EditorsTab() {
 	const [settings, setSettings] = useState<AppSettings | null>(null);

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 懒加载组件 Hook
  * 使用 Intersection Observer 实现组件的延迟渲染
  */

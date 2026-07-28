@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import type { DraftMeta, ScratchPadData } from "../../../shared/types";
 
 const AUTOSAVE_DELAY = 1500;
@@ -49,9 +49,9 @@ export function useScratchPad(): UseScratchPadResult {
 
 	/** 加载草稿列表 */
 	const loadDrafts = useCallback(async (): Promise<DraftMeta | null> => {
-		if (!window.piDesktop?.scratchPad) return null;
+		if (!window.snacodeDesktop?.scratchPad) return null;
 		try {
-			const list = await window.piDesktop.scratchPad.list();
+			const list = await window.snacodeDesktop.scratchPad.list();
 			setDrafts(list);
 			// 如果当前没有选中草稿，自动选中第一个
 			if (list.length > 0 && !currentDraftPathRef.current) {
@@ -76,9 +76,9 @@ export function useScratchPad(): UseScratchPadResult {
 
 	/** 加载指定草稿的内容 */
 	const loadContent = useCallback(async (draftPath: string) => {
-		if (!window.piDesktop?.scratchPad) return;
+		if (!window.snacodeDesktop?.scratchPad) return;
 		try {
-			const data = await window.piDesktop.scratchPad.load(draftPath);
+			const data = await window.snacodeDesktop.scratchPad.load(draftPath);
 			setContentState(data.content ?? "");
 		} catch {
 			setContentState("");
@@ -87,7 +87,7 @@ export function useScratchPad(): UseScratchPadResult {
 
 	// 启动时加载草稿列表并选中第一个
 	useEffect(() => {
-		if (!window.piDesktop?.scratchPad) return;
+		if (!window.snacodeDesktop?.scratchPad) return;
 		void loadDrafts().then((firstDraft) => {
 			if (firstDraft) {
 				void loadContent(firstDraft.path);
@@ -97,11 +97,11 @@ export function useScratchPad(): UseScratchPadResult {
 
 	/** 立即保存指定草稿 */
 	const flushSave = useCallback(async (draftPath: string, value: string) => {
-		if (!window.piDesktop?.scratchPad || !draftPath) return;
+		if (!window.snacodeDesktop?.scratchPad || !draftPath) return;
 		setIsSaving(true);
 		setHasError(false);
 		try {
-			await window.piDesktop.scratchPad.save(draftPath, value, 0);
+			await window.snacodeDesktop.scratchPad.save(draftPath, value, 0);
 			// 保存后刷新列表以更新 updatedAt 时间
 			void loadDrafts();
 		} catch {
@@ -164,7 +164,7 @@ export function useScratchPad(): UseScratchPadResult {
 		await saveNow();
 		const path = currentDraftPathRef.current;
 		if (path) {
-			await window.piDesktop?.scratchPad?.export(path);
+			await window.snacodeDesktop?.scratchPad?.export(path);
 		}
 	}, [saveNow]);
 
@@ -183,7 +183,7 @@ export function useScratchPad(): UseScratchPadResult {
 
 	/** 创建新草稿 */
 	const createDraft = useCallback(async () => {
-		if (!window.piDesktop?.scratchPad) return;
+		if (!window.snacodeDesktop?.scratchPad) return;
 		// 先保存当前草稿
 		const currentPath = currentDraftPathRef.current;
 		const currentValue = contentRef.current;
@@ -191,7 +191,7 @@ export function useScratchPad(): UseScratchPadResult {
 			if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 			await flushSave(currentPath, currentValue);
 		}
-		const newDraft = await window.piDesktop.scratchPad.create();
+		const newDraft = await window.snacodeDesktop.scratchPad.create();
 		setDrafts(prev => [newDraft, ...prev]);
 		setCurrentDraftPath(newDraft.path);
 		setContentState("");
@@ -199,8 +199,8 @@ export function useScratchPad(): UseScratchPadResult {
 
 	/** 删除草稿 */
 	const deleteDraft = useCallback(async (draftPath: string) => {
-		if (!window.piDesktop?.scratchPad) return;
-		await window.piDesktop.scratchPad.delete(draftPath);
+		if (!window.snacodeDesktop?.scratchPad) return;
+		await window.snacodeDesktop.scratchPad.delete(draftPath);
 		// 本地更新列表
 		setDrafts(prev => prev.filter(d => d.path !== draftPath));
 		// 如果删除的是当前草稿，切换到第一个可用草稿
@@ -223,8 +223,8 @@ export function useScratchPad(): UseScratchPadResult {
 		const handler = () => {
 			const path = currentDraftPathRef.current;
 			const value = contentRef.current;
-			if (path && window.piDesktop?.scratchPad) {
-				void window.piDesktop.scratchPad.save(path, value, 0);
+			if (path && window.snacodeDesktop?.scratchPad) {
+				void window.snacodeDesktop.scratchPad.save(path, value, 0);
 			}
 		};
 		window.addEventListener("beforeunload", handler);

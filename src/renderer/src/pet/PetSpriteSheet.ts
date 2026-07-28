@@ -1,4 +1,4 @@
-import type { PetManifest } from "@shared/types";
+﻿import type { PetManifest } from "@shared/types";
 
 /**
  * PetSpriteSheet —— spritesheet 加载与网格切帧（设计文档第 6.2 节）。

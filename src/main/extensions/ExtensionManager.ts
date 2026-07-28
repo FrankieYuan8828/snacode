@@ -3,13 +3,13 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { AppSettings, CliUpdateResult, ExtensionListResult, ExtensionSummary, UpdateCheckResult } from "../../shared/types";
-import type { SdLocator } from "../agent/PiLocator";
+import type { SdLocator } from "../agent/SdLocator";
 import { toWindowsHostPath, type WslEnvironment } from "../wsl/WslPaths";
 
 type SettingsProvider = () => AppSettings;
 
-/** SD MCP 库目录名 */
-const SD_MCP_LIBRARY_DIR = "sd-mcp-library";
+/** Snacode MCP 库目录名 */
+const SD_MCP_LIBRARY_DIR = "snacode-mcp-library";
 
 /** Snacode 内置扩展列表，用于在扫描不到时仍展示在扩展管理页中。 */
 const BUILT_IN_EXTENSIONS = [
@@ -20,13 +20,13 @@ const BUILT_IN_EXTENSIONS = [
 ] as const;
 
 /**
- * 通过 pi CLI 管理已安装扩展，避免桌面端直接改写 pi settings 导致和 CLI 行为不一致。
- * 自动检测 pi 版本，条件性添加 --no-approve（仅 pi >= 0.79.0 支持），
+ * 通过 sd CLI 管理已安装扩展，避免桌面端直接改写 sd settings 导致和 CLI 行为不一致。
+ * 自动检测 sd 版本，条件性添加 --no-approve（仅 sd >= 0.79.0 支持），
  * 兼容老版本避免 unknown option 错误。
  */
 export class ExtensionManager {
 	private wslEnvironment: WslEnvironment | null = null;
-	/** 扩展列表缓存：避免每次打开配置页都重新跑 pi list + npm view。 */
+	/** 扩展列表缓存：避免每次打开配置页都重新跑 sd list + npm view。 */
 	private listCache: ExtensionListResult | null = null;
 	/** 缓存是否包含 npm 版本信息（仅 forceRefresh 路径会写入 true）。 */
 	private listCacheHasVersionInfo = false;
@@ -51,9 +51,9 @@ export class ExtensionManager {
 		return this.wslEnvironment?.windowsHome ?? homedir();
 	}
 
-	/** 缓存的 pi 版本号，用于条件性传递 --no-approve。 */
-	private piVersion: string | null = null;
-	private piVersionPromise: Promise<string | null> | null = null;
+	/** 缓存的 sd 版本号，用于条件性传递 --no-approve。 */
+	private sdVersion: string | null = null;
+	private sdVersionPromise: Promise<string | null> | null = null;
 
 	/** 安装/卸载/开关后主动清缓存，下一次 list 重新获取。 */
 	invalidateListCache() {
@@ -64,14 +64,14 @@ export class ExtensionManager {
 	/**
 	 * 列出扩展。
 	 * - forceRefresh=false：优先返回内存缓存；无缓存时做一次轻量扫描（跳过 npm view）。
-	 * - forceRefresh=true：强制重新 `pi list`，并补充 npm 版本信息。
+	 * - forceRefresh=true：强制重新 `sd list`，并补充 npm 版本信息。
 	 */
 	async list(forceRefresh = false): Promise<ExtensionListResult> {
 		// 有缓存且（非强制刷新，或缓存已含版本信息）时直接返回。
 		if (this.listCache && (!forceRefresh || this.listCacheHasVersionInfo)) {
 			return this.listCache;
 		}
-		// 已有同级或更强请求在飞时复用，避免并发打爆 pi/npm。
+		// 已有同级或更强请求在飞时复用，避免并发打爆 sd/npm。
 		if (this.listInflight && (!forceRefresh || this.listInflightForce)) {
 			return this.listInflight;
 		}
@@ -99,10 +99,10 @@ export class ExtensionManager {
 			: parsed;
 
 		// 扫描本地自动发现的扩展（~/.sd/agent/extensions/ 下的 .ts 文件和目录），
-		// pi list 只列出通过 pi install 安装的包，不包含本地文件扩展。
+		// sd list 只列出通过 sd install 安装的包，不包含本地文件扩展。
 		const localExtensions = await this.scanLocalExtensions();
 
-		// 合并，已通过 pi 安装的优先保留原条目
+		// 合并，已通过 sd 安装的优先保留原条目
 		const installedPaths = new Set(piInstalled.map((ext) => ext.path));
 		const merged = [...piInstalled];
 		for (const local of localExtensions) {
@@ -134,7 +134,7 @@ export class ExtensionManager {
 	}
 
 	/**
-	 * 扫描 SD MCP 库目录（~/.snacode/sd-mcp-library/），发现本地扩展。
+	 * 扫描 Snacode MCP 库目录（~/.snacode/snacode-mcp-library/），发现本地扩展。
 	 * 单文件扩展（.ts 文件）和目录扩展（含 index.ts）都会被识别。
 	 */
 	private async scanLocalExtensions(): Promise<ExtensionSummary[]> {
@@ -208,11 +208,11 @@ export class ExtensionManager {
 		return result;
 	}
 
-	async checkPiUpdate(): Promise<UpdateCheckResult> {
+	async checkSdUpdate(): Promise<UpdateCheckResult> {
 		try {
-			const status = await this.locator.check(this.getSettings().customPiPath);
-			if (!status.installed) return { hasUpdate: false, error: status.error ?? "pi 未安装" };
-			const latestVersion = await this.npmViewVersion("@earendil-works/pi-coding-agent");
+			const status = await this.locator.check(this.getSettings().customSdPath);
+			if (!status.installed) return { hasUpdate: false, error: status.error ?? "sd 未安装" };
+			const latestVersion = await this.npmViewVersion("@snacode/sd-coding-agent");
 			return {
 				currentVersion: status.version,
 				latestVersion,
@@ -223,24 +223,24 @@ export class ExtensionManager {
 		}
 	}
 
-	async updatePi(): Promise<CliUpdateResult> {
-		const check = await this.checkPiUpdate();
+	async updateSd(): Promise<CliUpdateResult> {
+		const check = await this.checkSdUpdate();
 		if (!check.hasUpdate) {
 			return {
-				command: "pi update pi",
+				command: "sd update",
 				output: check.error ?? `当前版本 ${check.currentVersion ?? "unknown"}，最新版本 ${check.latestVersion ?? "unknown"}，无需更新。`,
 				updated: false,
 			};
 		}
-		const output = await this.runPi(["update", "pi"], 120_000, { offline: false });
-		return this.toUpdateResult("pi update pi", output, true);
+		const output = await this.runPi(["update"], 120_000, { offline: false });
+		return this.toUpdateResult("sd update", output, true);
 	}
 
 	async updateExtensions(): Promise<CliUpdateResult> {
 		const output = await this.runPi(["update", "--extensions"], 120_000, { offline: false });
 		// 更新后版本信息变化，强制下次 list 重新获取。
 		this.invalidateListCache();
-		return this.toUpdateResult("pi update --extensions", output, true);
+		return this.toUpdateResult("sd update --extensions", output, true);
 	}
 
 	private async enrichExtensionVersion(extension: ExtensionSummary): Promise<ExtensionSummary> {
@@ -288,7 +288,7 @@ export class ExtensionManager {
 				},
 				(error, stdout, stderr) => {
 					if (error) {
-						// Electron 启动环境经常缺少用户 shell PATH；通过 PiLocator 补齐 PATH 后仍失败时，把 stderr 透出给设置页。
+						// Electron 启动环境经常缺少用户 shell PATH；通过 SdLocator 补齐 PATH 后仍失败时，把 stderr 透出给设置页。
 						reject(new Error((stderr || error.message).trim()));
 						return;
 					}
@@ -314,7 +314,7 @@ export class ExtensionManager {
 	}
 
 	async setEnabled(source: string, enabled: boolean): Promise<void> {
-		const settingsPath = join(this.homeDir, ".snacode", "settings.json");
+		const settingsPath = join(this.homeDir, ".sd", "agent", "settings.json");
 		let raw = "{}";
 		try { raw = await readFile(settingsPath, "utf8"); } catch {}
 		const settings = JSON.parse(raw);
@@ -332,7 +332,7 @@ export class ExtensionManager {
 	}
 
 	private async getDisabledExtensions(): Promise<Set<string>> {
-		const settingsPath = join(this.homeDir, ".snacode", "settings.json");
+		const settingsPath = join(this.homeDir, ".sd", "agent", "settings.json");
 		try {
 			const raw = await readFile(settingsPath, "utf8");
 			const settings = JSON.parse(raw);
@@ -343,7 +343,7 @@ export class ExtensionManager {
 	}
 
 	/**
-	 * --no-approve 标志在 pi 0.79.0 引入。检测本地安装的 pi 版本是否支持。
+	 * --no-approve 标志在 sd 0.79.0 引入。检测本地安装的 sd 版本是否支持。
 	 */
 	private async noApproveSupported(): Promise<boolean> {
 		const version = await this.getPiVersion();
@@ -352,22 +352,22 @@ export class ExtensionManager {
 		if (!match) return false;
 		const major = parseInt(match[1], 10);
 		const minor = parseInt(match[2], 10);
-		// pi >= 0.79.0 或 1.x+ 都支持 --no-approve
+		// sd >= 0.79.0 或 1.x+ 都支持 --no-approve
 		return major > 0 || minor >= 79;
 	}
 
 	private async getPiVersion(): Promise<string | null> {
-		if (this.piVersion) return this.piVersion;
-		if (this.piVersionPromise) return this.piVersionPromise;
-		this.piVersionPromise = this.detectPiVersion();
-		return this.piVersionPromise;
+		if (this.sdVersion) return this.sdVersion;
+		if (this.sdVersionPromise) return this.sdVersionPromise;
+		this.sdVersionPromise = this.detectSdVersion();
+		return this.sdVersionPromise;
 	}
 
-	private async detectPiVersion(): Promise<string | null> {
+	private async detectSdVersion(): Promise<string | null> {
 		try {
-			const status = await this.locator.check(this.getSettings().customPiPath);
+			const status = await this.locator.check(this.getSettings().customSdPath);
 			if (status.installed && status.version) {
-				this.piVersion = status.version;
+				this.sdVersion = status.version;
 				return status.version;
 			}
 		} catch {
@@ -377,18 +377,18 @@ export class ExtensionManager {
 	}
 
 	private async runPi(args: string[], timeout: number, options: { offline?: boolean } = {}): Promise<string> {
-		// --no-approve 在 pi 0.79+ 才支持，老版本需要跳过以避免 unknown option 错误。
+		// --no-approve 在 sd 0.79+ 才支持，老版本需要跳过以避免 unknown option 错误。
 		const finalArgs = [...args];
 		if (await this.noApproveSupported()) {
 			finalArgs.push("--no-approve");
 		}
 		const settings = this.getSettings();
-		const command = this.locator.resolveCommand(settings.customPiPath, settings.wslEnabled, settings.wslDistro, settings.wslUser);
+		const command = this.locator.resolveCommand(settings.customSdPath, settings.wslEnabled, settings.wslDistro, settings.wslUser);
 		const invocation = this.locator.createInvocation(command, finalArgs);
 		const env = this.locator.createProcessEnv(settings, invocation.pathPrefix, invocation.wsl);
 		// list/remove/install 使用离线模式避免配置页被网络和包管理器输出拖慢；update 必须允许联网，
-		// 否则 pi 只会返回简化的 Updated packages，无法真正走 npm 更新流程。
-		if (options.offline !== false) env.PI_OFFLINE = "1";
+		// 否则 sd 只会返回简化的 Updated packages，无法真正走 npm 更新流程。
+		if (options.offline !== false) env.SD_OFFLINE = "1";
 		return new Promise<string>((resolve, reject) => {
 			execFile(
 				invocation.command,
@@ -404,7 +404,7 @@ export class ExtensionManager {
 				(error, stdout, stderr) => {
 					if (error) {
 						const detail = (stderr || error.message).trim();
-						reject(new Error(detail || "pi 扩展命令执行失败"));
+						reject(new Error(detail || "sd 扩展命令执行失败"));
 						return;
 					}
 					resolve(stdout);

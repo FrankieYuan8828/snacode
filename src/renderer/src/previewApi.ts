@@ -1,4 +1,4 @@
-import type { SnacodeDesktopApi } from "../../preload";
+﻿import type { SnacodeDesktopApi } from "../../preload";
 import { createDefaultExternalEditorSettings } from "../../shared/types";
 import type {
 	AgentTab,
@@ -125,21 +125,21 @@ let previewSettings: AppSettings = {
 	theme: "system",
 	lightBackground: "white",
 	language: "system",
-	piEnvironmentChecked: true,
+	sdEnvironmentChecked: true,
 	enableGitManagement: true,
 	gitCommitMessagePrompt: "",
 	closeToTray: true,
 	enableNotifications: true,
-	// showThinking 由 pi agent 的 hideThinkingBlock 控制，运行时从主进程加载
+	// showThinking 由 sd agent 的 hideThinkingBlock 控制，运行时从主进程加载
 	showThinking: true,
 	showDevTools: false,
-	piProxyEnabled: false,
-	piProxyUrl: "http://127.0.0.1:7890",
-	piProxyBypass: "localhost,127.0.0.1,::1",
+	sdProxyEnabled: false,
+	sdProxyUrl: "http://127.0.0.1:7890",
+	sdProxyBypass: "localhost,127.0.0.1,::1",
 	desktopProxyEnabled: false,
 	desktopProxyUrl: "http://127.0.0.1:7890",
 	desktopProxyBypass: "localhost,127.0.0.1,::1",
-	customPiPath: "",
+	customSdPath: "",
 	wslEnabled: false,
 	wslDistro: "Ubuntu",
 	wslUser: "root",
@@ -172,6 +172,7 @@ let previewSettings: AppSettings = {
 	fontFamilyMono: "commit-mono",
 	fontFamilyMonoCustom: "",
 	disableUpdateCheck: false,
+	defaultProjectTrust: "ask",
 };
 
 export function createPreviewApi(): SnacodeDesktopApi {
@@ -238,13 +239,13 @@ export function createPreviewApi(): SnacodeDesktopApi {
 		projectResources: {
 			list: async () => ({ skills: [], extensions: [] }),
 			createSkill: async (input) => ({
-				id: `project-pi:${input.name}`,
+				id: `project-snacode:${input.name}`,
 				name: input.name,
 				description: input.description,
-				path: `C:/Users/preview/project/.pi/skills/${input.name}/SKILL.md`,
-				dir: `C:/Users/preview/project/.pi/skills/${input.name}`,
-				sourceId: "project-pi" as const,
-				sourceLabel: ".pi/skills",
+				path: `C:/Users/preview/project/.sd/skills/${input.name}/SKILL.md`,
+				dir: `C:/Users/preview/project/.sd/skills/${input.name}`,
+				sourceId: "project-snacode" as const,
+				sourceLabel: ".sd/skills",
 				type: "directory" as const,
 				enabled: true,
 				valid: true,
@@ -254,26 +255,26 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			deleteExtension: async () => undefined,
 			toggleExtension: async () => undefined,
 			renameSkill: async (_projectId, _skillPath, newName) => ({
-				id: `project-pi:${newName}`,
+				id: `project-snacode:${newName}`,
 				name: newName,
 				description: "",
-				path: `C:/Users/preview/project/.pi/skills/${newName}/SKILL.md`,
-				dir: `C:/Users/preview/project/.pi/skills/${newName}`,
-				sourceId: "project-pi" as const,
-				sourceLabel: ".pi/skills",
+				path: `C:/Users/preview/project/.sd/skills/${newName}/SKILL.md`,
+				dir: `C:/Users/preview/project/.sd/skills/${newName}`,
+				sourceId: "project-snacode" as const,
+				sourceLabel: ".sd/skills",
 				type: "directory" as const,
 				enabled: true,
 				valid: true,
 				warnings: [],
 			}),
 		toggleSkill: async (_projectId, _skillPath, enabled) => ({
-				id: "project-pi:preview-toggle",
+				id: "project-snacode:preview-toggle",
 				name: "preview-skill",
 				description: "",
-				path: "C:/Users/preview/project/.pi/skills/preview-skill/SKILL.md",
-				dir: "C:/Users/preview/project/.pi/skills/preview-skill",
-				sourceId: "project-pi" as const,
-				sourceLabel: ".pi/skills",
+				path: "C:/Users/preview/project/.sd/skills/preview-skill/SKILL.md",
+				dir: "C:/Users/preview/project/.sd/skills/preview-skill",
+				sourceId: "project-snacode" as const,
+				sourceLabel: ".sd/skills",
 				type: "directory" as const,
 				enabled,
 				valid: true,
@@ -376,7 +377,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 		agentCli: {
 			check: async () => ({
 				installed: true,
-				command: "pi",
+				command: "sd",
 				version: "preview",
 				searchedDirs: [],
 			}),
@@ -392,8 +393,8 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				hasUpdate: false,
 			}),
 			update: async () => ({
-				command: "pi update pi --no-approve",
-				output: "Preview mode: pi update output",
+				command: "sd update sd --no-approve",
+				output: "Preview mode: sd update output",
 				updated: false,
 			}),
 			execInstall: async (_command) => ({
@@ -412,7 +413,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			validateConnection: async (_distro, _user) => ({
 				ok: true,
 				whoami: "preview",
-				piVersion: "preview",
+				sdVersion: "preview",
 				error: "",
 			}),
 		},
@@ -447,9 +448,9 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				electronVersion: "preview",
 				chromeVersion: "preview",
 				nodeVersion: "preview",
-				pi: {
+				sd: {
 					installed: true,
-					command: "pi",
+					command: "sd",
 					version: "preview",
 					searchedDirs: [],
 				},
@@ -472,7 +473,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			list: async () => ({
 				locations: [
 					{
-						id: "sd-global" as const,
+						id: "snacode-global" as const,
 						label: "~/.sd/agent/skills",
 						path: "C:/Users/preview/.sd/agent/skills",
 						rootMarkdownEnabled: true,
@@ -481,7 +482,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				skills: [],
 			}),
 			create: async (input) => ({
-				id: `sd-global:${input.name}`,
+				id: `snacode-global:${input.name}`,
 				name: input.name,
 				description: input.description,
 				path: `C:/Users/preview/.sd/agent/skills/${input.name}/SKILL.md`,
@@ -494,12 +495,12 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				warnings: [],
 			}),
 			toggle: async (path, enabled) => ({
-				id: `sd-global:${path}`,
+				id: `snacode-global:${path}`,
 				name: "preview-skill",
 				description: "Preview skill",
 				path,
 				dir: path.replace(/[/\\]SKILL\.md$/, ""),
-				sourceId: "sd-global" as const,
+				sourceId: "snacode-global" as const,
 				sourceLabel: "~/.sd/agent/skills",
 				type: "directory" as const,
 				enabled,
@@ -509,12 +510,12 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			delete: async () => undefined,
 			openFolder: async () => undefined,
 			rename: async (_skillPath, newName) => ({
-				id: `sd-global:preview/${newName}/SKILL.md`,
+				id: `snacode-global:preview/${newName}/SKILL.md`,
 				name: newName,
 				description: "Preview skill",
 				path: `C:/Users/preview/.sd/agent/skills/${newName}/SKILL.md`,
 				dir: `C:/Users/preview/.sd/agent/skills/${newName}`,
-				sourceId: "sd-global" as const,
+				sourceId: "snacode-global" as const,
 				sourceLabel: "~/.sd/agent/skills",
 				type: "directory" as const,
 				enabled: true,
@@ -538,7 +539,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			install: async (_source: string) => "",
 			toggle: async () => undefined,
 			update: async () => ({
-				command: "pi update --extensions --no-approve",
+				command: "sd update --extensions --no-approve",
 				output: "Preview mode: extensions update output",
 				updated: false,
 			}),
@@ -615,9 +616,9 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				enabled: true,
 				valid: true,
 				warnings: [],
-				id: `sd-global:preview`,
+				id: `snacode-global:preview`,
 				dir: "",
-				sourceId: "sd-global",
+				sourceId: "snacode-global",
 				sourceLabel: "Preview",
 				type: "directory",
 			}),
@@ -633,7 +634,7 @@ export function createPreviewApi(): SnacodeDesktopApi {
 				previewSettings = { ...previewSettings, ...patch };
 				return { ...previewSettings };
 			},
-			testPiProxy: async () => ({
+			testAgentProxy: async () => ({
 				success: true,
 				url: "https://api.openai.com/v1/models",
 				elapsedMs: 120,
@@ -775,6 +776,8 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			sendUiResponse: async () => undefined,
 			onTrustRequest: noop,
 			respondTrustRequest: async () => undefined,
+			invokeTool: async () => ({ success: false, error: "预览模式不支持" }),
+			invokeSkill: async () => ({ success: false, error: "预览模式不支持" }),
 		},
 		pet: {
 			onState: noop,
@@ -872,6 +875,18 @@ export function createPreviewApi(): SnacodeDesktopApi {
 			load: async () => ({ content: "", lastEditedAt: 0, cursorPosition: 0 }),
 			save: async () => {},
 			export: async () => false,
+		},
+		algs: {
+			submitTask: async () => {},
+			getTaskStatus: async () => "pending" as const,
+			getTasks: async () => [],
+			getSkillCards: async () => [],
+			saveSkillCard: async () => {},
+			deleteSkillCard: async () => {},
+			downloadLora: async () => {},
+			getLoraList: async () => [],
+			triggerTraining: async () => {},
+			getTrainingJobs: async () => [],
 		},
 	};
 }

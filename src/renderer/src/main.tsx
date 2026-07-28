@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
 import type { AppLogLevel } from "@shared/types";
 import { App } from "./App";
@@ -9,7 +9,7 @@ import "./styles.css";
 import "./file-icons.css";
 
 function writeStartupLog(level: AppLogLevel, message: string, detail?: unknown) {
-  window.piDesktop?.app.rendererLog(level, "renderer", message, detail).catch(() => undefined);
+  window.snacodeDesktop?.app.rendererLog(level, "renderer", message, detail).catch(() => undefined);
 }
 
 /** 将异常压缩成用户可读的短文案，避免 toast 被超长 stack 淹没。 */

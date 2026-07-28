@@ -122,13 +122,13 @@ Snacode
 │  ├─ Session file-change summary and update prompt modal
 │  └─ Settings UI (Basic / Proxy / Developer tabs)
 │
-└─ Pi Runtime
-   ├─ One pi RPC process per agent tab
+└─ Sd Runtime
+   ├─ One sd RPC process per agent tab
    ├─ Per-project cwd isolation
-   └─ Native pi sessions / tools / models / context
+   └─ Native sd sessions / tools / models / context
 ```
 
-Core design principle: **one agent tab = one pi RPC process**, keeping sessions isolated and letting pi own its native behavior.
+Core design principle: **one agent tab = one sd RPC process**, keeping sessions isolated and letting sd own its native behavior.
 
 ---
 
@@ -136,14 +136,14 @@ Core design principle: **one agent tab = one pi RPC process**, keeping sessions 
 
 - Node.js 20+
 - npm
-- `pi` command available in system `PATH`
-- pi authentication configured (via `pi` / `/login` or API keys)
+- `sd` command available in system `PATH`
+- sd authentication configured (via `sd` / `/login` or API keys)
 
-Verify pi is available:
+Verify sd is available:
 
 ```bash
-pi --version
-pi --mode rpc
+sd --version
+sd --mode rpc
 ```
 
 ---

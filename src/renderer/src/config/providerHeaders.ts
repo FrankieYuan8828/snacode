@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+﻿import { t } from "../i18n";
 
 export function getUserAgentOptions() {
 	return [
@@ -11,7 +11,7 @@ export function getUserAgentOptions() {
 		{ value: "OpenAI/JS 6.26.0", label: "OpenAI/JS 6.26.0" },
 		{ value: "anthropic-sdk-typescript/0.27.3", label: "Anthropic SDK (anthropic-sdk-typescript/0.27.3)" },
 		{ value: "Mozilla/5.0", label: "Mozilla/5.0 (浏览器)" },
-		{ value: "pi-coding-agent", label: "pi-coding-agent" },
+		{ value: "sd-coding-agent", label: "sd-coding-agent" },
 		{ value: "python-requests/2.31.0", label: "Python Requests" },
 		{ value: "axios/1.6.0", label: "Axios" },
 	];
@@ -49,8 +49,8 @@ export function setHeaderValue(
 	return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-// pi provider 的 api 字段必须使用官方 registry 名称；openai-completions 实际对应 Chat Completions。
-// 不再把历史别名 openai-chat-completions 作为预设暴露，避免测试通过但 pi 会话启动失败。
+// sd provider 的 api 字段必须使用官方 registry 名称；openai-completions 实际对应 Chat Completions。
+// 不再把历史别名 openai-chat-completions 作为预设暴露，避免测试通过但 sd 会话启动失败。
 export const PROVIDER_API_OPTIONS = [
 	"openai-completions",
 	"openai-responses",
@@ -111,3 +111,5 @@ export const KNOWN_PROVIDER_ENDPOINTS: Record<
 	"opencode-go": { baseUrl: "https://opencode.ai/zen/go/v1", apiType: "openai-completions" },
 	"doubao": { baseUrl: "https://ark.cn-beijing.volces.com/api/v3", apiType: "openai-completions" },
 };
+
+

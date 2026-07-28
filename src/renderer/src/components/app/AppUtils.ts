@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 非组件工具函数，与 AppParts.tsx 分离以避免 Vite Fast Refresh 报错。
  * Fast Refresh 只支持组件和 hook（useXxx）导出，普通函数导出会导致整页刷新。
  */

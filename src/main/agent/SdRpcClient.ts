@@ -52,7 +52,7 @@ export class SdRpcClient extends EventEmitter {
     this.write(command);
   }
 
-  /** 直接向 pi 的 stdin 写入原始 JSONL，不经过 pending 跟踪（用于 extension_ui_response 等消息） */
+  /** 直接向 sd 的 stdin 写入原始 JSONL，不经过 pending 跟踪（用于 extension_ui_response 等消息） */
   sendRaw(payload: Record<string, unknown>) {
     this.stdin.write(`${JSON.stringify(payload)}\n`);
   }
@@ -68,7 +68,7 @@ export class SdRpcClient extends EventEmitter {
   private write(payload: Record<string, unknown>) {
     // 记录发出的 RPC 命令，方便调试
     this.emit("log", { direction: "send", data: payload });
-    // pi RPC 使用严格 JSONL 协议；每条命令必须以 LF 结尾，不能依赖 readline 之类的宽松分行。
+    // sd RPC 使用严格 JSONL 协议；每条命令必须以 LF 结尾，不能依赖 readline 之类的宽松分行。
     this.stdin.write(`${JSON.stringify(payload)}\n`);
   }
 
@@ -104,7 +104,7 @@ export class SdRpcClient extends EventEmitter {
     try {
       message = JSON.parse(line);
     } catch {
-      // stdout 被非 JSON 内容污染时保留原文，方便用户排查 PATH、pi 版本或启动脚本问题。
+      // stdout 被非 JSON 内容污染时保留原文，方便用户排查 PATH、sd 版本或启动脚本问题。
       this.emit("protocol-error", line);
       return;
     }

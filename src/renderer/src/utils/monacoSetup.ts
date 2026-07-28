@@ -1,4 +1,4 @@
-import { loader } from "@monaco-editor/react";
+﻿import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 
 // Monaco Editor 依赖 Web Worker 做语法高亮。Vite ?worker 后缀会把每个 worker 拆成独立 chunk，

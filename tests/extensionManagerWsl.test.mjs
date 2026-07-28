@@ -60,14 +60,14 @@ test("reads an installed WSL npm extension version through its canonical host pa
 		manager.configureWsl(wslPaths.createWslEnvironment("Ubuntu-24.04", "root", "/root"));
 
 		const version = await manager.readInstalledVersion(
-			"/root/.pi/agent/extensions/npm/fixture-extension",
+			"/root/.sd/agent/extensions/npm/fixture-extension",
 		);
 
 		assert.equal(version, "1.2.3");
 		assert.equal(requestedPaths.length, 1);
 		assert.equal(
 			requestedPaths[0].replace(/\\/g, "/"),
-			"//wsl.localhost/Ubuntu-24.04/root/.pi/agent/extensions/npm/fixture-extension/package.json",
+			"//wsl.localhost/Ubuntu-24.04/root/.sd/agent/extensions/npm/fixture-extension/package.json",
 		);
 	} finally {
 		rmSync(fixtureDir, { recursive: true, force: true });
@@ -91,11 +91,11 @@ test("reads and writes extension enablement in the active WSL HOME", async () =>
 	const manager = new ExtensionManager({}, () => ({}));
 	manager.configureWsl(wslPaths.createWslEnvironment("Ubuntu-24.04", "root", "/root"));
 
-	await manager.setEnabled("pi-deck-todo.ts", false);
+	await manager.setEnabled("sd-deck-todo.ts", false);
 	const disabled = await manager.getDisabledExtensions();
 
-	const expectedPath = "//wsl.localhost/Ubuntu-24.04/root/.pi/agent/settings.json";
+	const expectedPath = "//wsl.localhost/Ubuntu-24.04/root/.sd/agent/settings.json";
 	assert.equal(reads.every((filePath) => filePath.replace(/\\/g, "/") === expectedPath), true);
 	assert.equal(writes[0].replace(/\\/g, "/"), expectedPath);
-	assert.equal(disabled.has("pi-deck-todo.ts"), true);
+	assert.equal(disabled.has("sd-deck-todo.ts"), true);
 });

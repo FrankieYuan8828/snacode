@@ -1,12 +1,12 @@
-# 功能介绍
+﻿# 功能介绍
 
-Snacode 的核心目标是把多个本地 pi Agent 会话收拢到一个稳定的桌面工作台里。
+Snacode 的核心目标是把多个本地 sd Agent 会话收拢到一个稳定的桌面工作台里。
 
 ## 多项目工作区
 
 - 添加、搜索、拖动排序和切换本地项目目录。
 - 每个项目可以运行多个 Agent tab。
-- 项目之间通过独立 cwd 和独立 pi RPC 进程隔离。
+- 项目之间通过独立 cwd 和独立 sd RPC 进程隔离。
 - 项目列表顶部提供内置 Chat 入口，适合不绑定代码目录的通用对话。
 
 <img class="doc-screenshot" src="/images/overview.png" alt="工作区与对话界面">

@@ -20,7 +20,7 @@ type ParsedCodexSession = {
 
 export class CodexSessionImporter {
 	private readonly codexRoot = join(app.getPath("home"), ".codex", "sessions");
-	private readonly piRoot = join(app.getPath("home"), ".pi", "agent", "sessions");
+	private readonly sdRoot = join(app.getPath("home"), ".sd", "agent", "sessions");
 
 	async scan(projectPath: string): Promise<CodexSessionSummary[]> {
 		const files = await this.collectJsonl(this.codexRoot).catch(() => []);
@@ -162,7 +162,7 @@ export class CodexSessionImporter {
 					role,
 					content,
 					timestamp: messageTimestamp,
-					// pi 的上下文统计会读取 assistant.usage.totalTokens；Codex 原始历史没有该字段，导入时用 0 值占位保证可继续对话。
+					// sd 的上下文统计会读取 assistant.usage.totalTokens；Codex 原始历史没有该字段，导入时用 0 值占位保证可继续对话。
 					...(role === "assistant" ? { usage: this.zeroUsage() } : {}),
 					...extra,
 				},
@@ -288,7 +288,7 @@ export class CodexSessionImporter {
 						toolName: toolNames.get(callId) ?? "tool",
 						isError: Boolean(payload.is_error),
 						// Codex 历史只有 function_call / output 时间戳，导入时保存派生耗时，
-						// 让桌面端工具卡片与原生 pi 会话保持一致。
+						// 让桌面端工具卡片与原生 sd 会话保持一致。
 						...(startedAt !== undefined ? { startedAt } : {}),
 						...(startedAt !== undefined && completedAt !== undefined
 							? { durationMs: Math.max(0, completedAt - startedAt) }
@@ -388,7 +388,7 @@ export class CodexSessionImporter {
 	}
 
 	private getProjectSessionDir(projectPath: string) {
-		return join(this.piRoot, this.safePathToken(projectPath));
+		return join(this.sdRoot, this.safePathToken(projectPath));
 	}
 
 	private safePathToken(path: string) {

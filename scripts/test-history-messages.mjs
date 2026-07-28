@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
-const source = readFileSync("src/main/pi/historyMessages.ts", "utf8")
+const source = readFileSync("src/main/agent/historyMessages.ts", "utf8")
 	.replace('import type { ChatMessage } from "../../shared/types";\n\n', "");
 const compiled = ts.transpileModule(source, {
 	compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },

@@ -2,11 +2,11 @@
  * `normalizeNulRedirects` 纯函数的独立测试。
  *
  * 运行方式（需要 Node 18+ 原生 TypeScript 支持或 tsx）：
- *   npx tsx resources/extensions/pi-deck-nul-redirect-fix.test.ts
+ *   npx tsx resources/extensions/snacode-nul-redirect-fix.test.ts
  */
 
 // =========================================================================
-// 纯函数副本（与 pi-deck-nul-redirect-fix.ts 保持同步，避免引入 pi 依赖）
+// 纯函数副本（与 snacode-nul-redirect-fix.ts 保持同步，避免引入 sd 依赖）
 // =========================================================================
 
 function normalizeNulRedirects(command: string): string {

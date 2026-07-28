@@ -1,17 +1,17 @@
-import axios from "axios";
+﻿import axios from "axios";
 import type { ExtensionPackageInfo } from "../../shared/types";
 
 /**
- * GitHub MCP 扩展仓库服务
- * 通过 GitHub API 获取 MCP 工具列表，支持搜索和星数排序
+ * GitHub Snacode 扩展仓库服务
+ * 通过 GitHub API 获取 Snacode 扩展列表，支持搜索和星数排序
  */
 export class GithubExtensionService {
 	private readonly GITHUB_API_BASE = "https://api.github.com";
-	private readonly DEFAULT_QUERY = "topic:pi-extension OR topic:mcp-server";
+	private readonly DEFAULT_QUERY = "topic:snacode-extension OR topic:snacode-mcp";
 	private readonly MAX_RESULTS = 50;
 
 	/**
-	 * 搜索 GitHub 上的 MCP 扩展
+	 * 搜索 GitHub 上的 Snacode 扩展
 	 */
 	async searchExtensions(query: string = "", sortBy: "stars" | "updated" | "forks" = "stars"): Promise<ExtensionPackageInfo[]> {
 		try {
@@ -126,14 +126,14 @@ export class GithubExtensionService {
 		return [
 			{
 				name: "context-mode",
-				description: "MCP 插件，可节省 98% 的上下文窗口。支持 Claude Code、Gemini CLI、VS Code Copilot 等。沙箱代码执行、FTS5 知识库和意图驱动搜索。",
-				installCmd: "npm:context-mode",
-				tags: ["extension", "context", "knowledge"],
-				downloads: "107K/mo",
-				updated: "2026-07-01",
-				npmUrl: "https://www.npmjs.com/package/context-mode",
-				repoUrl: "https://github.com/mksglu/context-mode",
-				github: {
+			description: "MCP 插件，可节省 98% 的上下文窗口。支持 Claude Code、Gemini CLI、VS Code Copilot 等。沙箱代码执行、FTS5 知识库和意图驱动搜索。",
+			installCmd: "npm:context-mode",
+			tags: ["extension", "context", "knowledge"],
+			downloads: "107K/mo",
+			updated: "2026-07-01",
+			npmUrl: "https://www.npmjs.com/package/context-mode",
+			repoUrl: "https://github.com/mksglu/context-mode",
+			github: {
 					stars: 1280,
 					forks: 86,
 					issues: 12,
@@ -143,15 +143,15 @@ export class GithubExtensionService {
 				},
 			},
 			{
-				name: "pi-web-access",
-				description: "网络搜索、URL 抓取、GitHub 仓库克隆、PDF 提取、YouTube 视频理解和本地视频分析。",
-				installCmd: "npm:pi-web-access",
-				tags: ["extension", "web", "search"],
-				downloads: "99K/mo",
-				updated: "2026-06-28",
-				npmUrl: "https://www.npmjs.com/package/pi-web-access",
-				repoUrl: "https://github.com/nicobailon/pi-web-access",
-				github: {
+			name: "snacode-web-access",
+			description: "网络搜索、URL 抓取、GitHub 仓库克隆、PDF 提取、YouTube 视频理解和本地视频分析。",
+			installCmd: "npm:snacode-web-access",
+			tags: ["extension", "web", "search"],
+			downloads: "99K/mo",
+			updated: "2026-06-28",
+			npmUrl: "https://www.npmjs.com/package/snacode-web-access",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-web-access",
+			github: {
 					stars: 956,
 					forks: 45,
 					issues: 8,
@@ -161,15 +161,15 @@ export class GithubExtensionService {
 				},
 			},
 			{
-				name: "pi-mcp-adapter",
-				description: "MCP（Model Context Protocol）适配器扩展，让 Snacode 可以连接任何 MCP 服务器。",
-				installCmd: "npm:pi-mcp-adapter",
-				tags: ["extension", "mcp"],
-				downloads: "99K/mo",
-				updated: "2026-06-15",
-				npmUrl: "https://www.npmjs.com/package/pi-mcp-adapter",
-				repoUrl: "https://github.com/nicobailon/pi-mcp-adapter",
-				github: {
+			name: "snacode-mcp-adapter",
+			description: "MCP（Model Context Protocol）适配器扩展，让 Snacode 可以连接任何 MCP 服务器。",
+			installCmd: "npm:snacode-mcp-adapter",
+			tags: ["extension", "mcp"],
+			downloads: "99K/mo",
+			updated: "2026-06-15",
+			npmUrl: "https://www.npmjs.com/package/snacode-mcp-adapter",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-mcp-adapter",
+			github: {
 					stars: 620,
 					forks: 32,
 					issues: 5,
@@ -179,15 +179,15 @@ export class GithubExtensionService {
 				},
 			},
 			{
-				name: "pi-subagents",
-				description: "任务委派扩展，支持链式、并行执行和 TUI 澄清。可将复杂任务拆解给多个子 Agent。",
-				installCmd: "npm:pi-subagents",
-				tags: ["extension", "subagents", "parallel"],
-				downloads: "92K/mo",
-				updated: "2026-07-10",
-				npmUrl: "https://www.npmjs.com/package/pi-subagents",
-				repoUrl: "https://github.com/nicobailon/pi-subagents",
-				github: {
+			name: "snacode-subagents",
+			description: "任务委派扩展，支持链式、并行执行和 TUI 澄清。可将复杂任务拆解给多个子 Agent。",
+			installCmd: "npm:snacode-subagents",
+			tags: ["extension", "subagents", "parallel"],
+			downloads: "92K/mo",
+			updated: "2026-07-10",
+			npmUrl: "https://www.npmjs.com/package/snacode-subagents",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-subagents",
+			github: {
 					stars: 875,
 					forks: 56,
 					issues: 10,
@@ -197,15 +197,15 @@ export class GithubExtensionService {
 				},
 			},
 			{
-				name: "@samfp/pi-memory",
-				description: "长期记忆扩展，用于在 Snacode 会话之间保存和检索偏好、项目事实与经验教训。",
-				installCmd: "npm:@samfp/pi-memory",
-				tags: ["extension", "memory"],
-				downloads: "45K/mo",
-				updated: "2026-05-20",
-				npmUrl: "https://pi.dev/packages/@samfp/pi-memory?name=%40samfp%2Fpi-memory",
-				repoUrl: "https://github.com/samfp/pi-memory",
-				github: {
+			name: "@snacode/snacode-memory",
+			description: "长期记忆扩展，用于在 Snacode 会话之间保存和检索偏好、项目事实与经验教训。",
+			installCmd: "npm:@snacode/snacode-memory",
+			tags: ["extension", "memory"],
+			downloads: "45K/mo",
+			updated: "2026-05-20",
+			npmUrl: "https://www.npmjs.com/package/@snacode/snacode-memory",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-memory",
+			github: {
 					stars: 420,
 					forks: 28,
 					issues: 6,
@@ -218,7 +218,7 @@ export class GithubExtensionService {
 	}
 
 	/**
-	 * 获取热门 MCP 扩展（按星数排序）
+	 * 获取热门 Snacode 扩展（按星数排序）
 	 */
 	async getPopularExtensions(): Promise<ExtensionPackageInfo[]> {
 		return this.searchExtensions("", "stars");

@@ -4,7 +4,7 @@ import { ArrowLeft, Download, ExternalLink, Search, Sparkles } from "lucide-reac
 import type { PromptStoreItem, PromptStoreSearchResult, SkillSummary } from "../../../shared/types";
 import { t } from "../i18n";
 
-const api = (window as unknown as { piDesktop: { skillStore: { search: (q: string) => Promise<PromptStoreSearchResult>; import: (item: PromptStoreItem, locationId?: string) => Promise<SkillSummary> } } }).piDesktop;
+const api = (window as unknown as { snacodeDesktop: { skillStore: { search: (q: string) => Promise<PromptStoreSearchResult>; import: (item: PromptStoreItem, locationId?: string) => Promise<SkillSummary> } } }).snacodeDesktop;
 
 const SUGGESTED_SEARCHES = ["code review", "testing", "react", "python", "git", "docker", "security", "refactoring", "typescript", "node"];
 

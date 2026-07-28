@@ -1,4 +1,4 @@
-/**
+﻿/**
  * FeishuLinkIndicator — 输入框中的飞书链接状态指示器
  *
  * 在 composer 底部栏中显示飞书连接状态，提供按会话切换 Bot 的入口。

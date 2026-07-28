@@ -1,4 +1,4 @@
-import rawDefinitions from "./definitions.json" with { type: "json" };
+﻿import rawDefinitions from "./definitions.json" with { type: "json" };
 import rawIcons from "./icons.json" with { type: "json" };
 
 export type SetiIconColor =

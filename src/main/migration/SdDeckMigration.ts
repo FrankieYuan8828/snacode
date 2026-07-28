@@ -5,12 +5,12 @@ import { join, basename } from "node:path";
 import type { AppLogger } from "../logging/AppLogger";
 
 /**
- * PiDeck → Snacode 数据迁移工具
+ * SdDeck → Snacode 数据迁移工具
  * 
- * 在首次启动时自动检测旧版 PiDeck 数据目录，将配置、会话、项目等数据迁移到新的 Snacode 目录。
+ * 在首次启动时自动检测旧版 SdDeck 数据目录，将配置、会话、项目等数据迁移到新的 Snacode 目录。
  * 
  * 迁移内容：
- * - 用户数据目录重命名: ~/.pi-desktop → ~/.snacode
+ * - 用户数据目录重命名: ~/.snacode-old → ~/.snacode
  * - 飞书配置: feishu.json
  * - 应用设置: settings.json
  * - 项目配置: projects.json
@@ -30,13 +30,14 @@ export interface MigrationResult {
 	error?: string;
 }
 
-export class PiDeckMigration {
+export class SdDeckMigration {
 	private readonly oldDataDir: string;
 	private readonly newDataDir: string;
 	private readonly logger: AppLogger | undefined;
 
 	constructor(logger?: AppLogger) {
-		this.oldDataDir = join(app.getPath("userData"), "pi-desktop");
+		// 旧版应用的 data 目录名保持为 pd-desktop（历史遗留），检测并迁移旧数据
+		this.oldDataDir = join(app.getPath("userData"), "pd-desktop");
 		this.newDataDir = join(app.getPath("userData"), "snacode");
 		this.logger = logger;
 	}
@@ -62,7 +63,7 @@ export class PiDeckMigration {
 		};
 
 		try {
-			this.log("info", "Starting PiDeck → Snacode migration...");
+			this.log("info", "Starting SdDeck → Snacode migration...");
 			
 			// 创建新数据目录
 			await mkdir(this.newDataDir, { recursive: true });
@@ -130,7 +131,7 @@ export class PiDeckMigration {
 	}
 
 	/**
-	 * 更新配置文件中的旧引用（如 pi-deck → snacode）
+	 * 更新配置文件中的旧引用（如 sd-deck → snacode）
 	 */
 	private async updateConfigReferences(): Promise<void> {
 		const configFiles = [
@@ -145,8 +146,11 @@ export class PiDeckMigration {
 
 			try {
 				let content = await readFile(filePath, "utf-8");
-				content = content.replace(/pi-deck/g, "snacode");
+				// 兼容旧版 pd-deck 和 sd-deck 引用，统一替换为 snacode
+				content = content.replace(/pd-deck/g, "snacode");
+				content = content.replace(/sd-deck/g, "snacode");
 				content = content.replace(/PiDeck/g, "Snacode");
+				content = content.replace(/SdDeck/g, "Snacode");
 				await writeFile(filePath, content, "utf-8");
 				this.log("info", `Updated references in: ${fileName}`);
 			} catch (err) {

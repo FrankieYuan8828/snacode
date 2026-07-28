@@ -1,4 +1,4 @@
-import type { AgentRuntimeState } from "../../../shared/types";
+﻿import type { AgentRuntimeState } from "../../../shared/types";
 
 /**
  * 合并异步 runtime 快照。完整状态查询可能晚于原始 tool start/end 事件返回，

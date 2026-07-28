@@ -1,4 +1,4 @@
-import type { ModelItem } from "./configTypes";
+﻿import type { ModelItem } from "./configTypes";
 
 type FetchedModel = { id: string; name?: string };
 

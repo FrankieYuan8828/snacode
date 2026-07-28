@@ -1,4 +1,4 @@
-import { showNotice } from "../utils/notice";
+﻿import { showNotice } from "../utils/notice";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, FileEdit, Pencil, ShoppingBag, Trash2, X } from "lucide-react";
 import type {

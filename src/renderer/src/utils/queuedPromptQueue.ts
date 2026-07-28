@@ -1,6 +1,6 @@
-import type { ComposerAgentMode, ImageContent } from "../../../shared/types";
+﻿import type { ComposerAgentMode, ImageContent } from "../../../shared/types";
 
-/** Renderer 中仍未被 pi 明确接收的消息快照。 */
+/** Renderer 中仍未被 sd 明确接收的消息快照。 */
 export type QueuedPromptStatus = "pending" | "sending" | "failed" | "unknown";
 
 export interface QueuedPromptSnapshot {
@@ -27,9 +27,9 @@ export const QUEUED_PROMPT_VISIBLE = 3;
 export function replaceAgentQueue(
   current: QueuedPromptMap,
   agentId: string,
-  updater: (queue: QueuedPromptSnapshot[]) => QueuedPromptSnapshot[],
+  usdater: (queue: QueuedPromptSnapshot[]) => QueuedPromptSnapshot[],
 ): QueuedPromptMap {
-  const nextQueue = updater(current[agentId] ?? []);
+  const nextQueue = usdater(current[agentId] ?? []);
   const next = { ...current };
   if (nextQueue.length > 0) next[agentId] = nextQueue;
   else delete next[agentId];
@@ -93,7 +93,7 @@ export function retryFailedPrompt(
 }
 
 /**
- * 只有尚未提交或已被 pi 明确拒绝的消息可撤回。sending 可能已经被接收，unknown
+ * 只有尚未提交或已被 sd 明确拒绝的消息可撤回。sending 可能已经被接收，unknown
  * 更明确表示结果不可判定；删除这两类快照会让用户误以为消息肯定没有送达。
  */
 export function retractPrompt(
@@ -224,4 +224,5 @@ export function migrateQueuedPrompts(
   }
   return next;
 }
+
 

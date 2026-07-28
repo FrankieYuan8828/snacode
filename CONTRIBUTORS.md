@@ -4,7 +4,7 @@
 
 <!-- 按首次贡献时间排序 -->
 
-- **1900EasonJin** ([@1900EasonJin](https://github.com/1900EasonJin)) — 飞书/Lark 远程控制集成、记忆管理卡片、Thinking 节流优化、侧栏卡片化重设计、草稿本浮层、终端乱码修复 (#80, #74, #60, #44, #42, #35, #34, #31, #30, #29, #28, #18)
+- **FrankieYuan8828** ([@FrankieYuan8828](https://github.com/FrankieYuan8828)) — 飞书/Lark 远程控制集成、记忆管理卡片、Thinking 节流优化、侧栏卡片化重设计、草稿本浮层、终端乱码修复 (#80, #74, #60, #44, #42, #35, #34, #31, #30, #29, #28, #18)
 - **zx3022448** ([@zx3022448](https://github.com/zx3022448)) — 模型列表拉取优化及错误状态展示、模型选择器改进 (#25, #19)
 - **frostime** ([@frostime](https://github.com/frostime)) — 会话信息同步、自定义字体/字号与缩放比例、模型选择器自动滚动、最大推理等级、RPC 扩展 UI 生命周期修复 (#58, #56, #53, #52, #50)
 - **magic2066** ([@magic2066](https://github.com/magic2066)) — 修复 Codex 子代理会话导入展示、修复 Linux 桌面宠物拖拽和 dev 启动 (#40, #41)

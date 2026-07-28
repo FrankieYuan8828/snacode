@@ -23,8 +23,8 @@
  * @packageDocumentation
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { StringEnum } from "@earendil-works/pi-ai";
+import type { ExtensionAPI, ExtensionContext } from "@snacode/sd-coding-agent";
+import { StringEnum } from "@snacode/sd-ai";
 import { Type } from "typebox";
 
 interface Todo {

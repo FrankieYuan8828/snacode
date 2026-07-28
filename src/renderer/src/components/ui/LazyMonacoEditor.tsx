@@ -1,4 +1,4 @@
-import { lazy, Suspense, memo } from "react";
+﻿import { lazy, Suspense, memo } from "react";
 import type { MonacoEditorProps } from "./MonacoEditor";
 
 // 动态加载 MonacoEditor（7.8MB vendor-monaco + 4.3MB workers）。

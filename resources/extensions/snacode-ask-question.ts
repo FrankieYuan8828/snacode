@@ -2,7 +2,7 @@
  * Snacode Ask Question Extension
  *
  * 注册 ask_question 工具，让 LLM 可以向用户提问并从桌面端 UI 获取回答。
- * 使用 pi RPC Extension UI Protocol（ctx.ui.select/confirm/input/editor）实现用户交互，
+ * 使用 sd RPC Extension UI Protocol（ctx.ui.select/confirm/input/editor）实现用户交互，
  * 桌面端处理 extension_ui_request/response 协议循环。
  *
  * 两种用法：
@@ -19,9 +19,9 @@
  * @packageDocumentation
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@snacode/sd-coding-agent";
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/pi-ai";
+import { StringEnum } from "@snacode/sd-ai";
 
 // 归一化后的选项：select 专用
 interface NormalizedOption {

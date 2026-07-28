@@ -9,9 +9,9 @@
  * 选择执行时恢复写工具，并用 [DONE:n] 标记驱动进度 widget。
  */
 
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { AgentMessage } from "@snacode/sd-agent-core";
+import type { AssistantMessage, TextContent } from "@snacode/sd-ai";
+import type { ExtensionAPI, ExtensionContext } from "@snacode/sd-coding-agent";
 
 const PI_DECK_PLAN_MODE_MARKER = "__SNACODE_PLAN_MODE__";
 

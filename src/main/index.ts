@@ -1,4 +1,4 @@
-import {
+﻿import {
 	app,
 	BrowserWindow,
 	dialog,
@@ -17,7 +17,8 @@ import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs
 import { spawn, type ChildProcess } from "node:child_process";
 import { is } from "@electron-toolkit/utils";
 import { PetSystem, type PetSystemDeps } from "./pet";
-import { PiDeckMigration } from "./migration/PiDeckMigration";
+import { SdDeckMigration } from "./migration/SdDeckMigration";
+import { ALGSSystem, getALGS, type TaskInput, type TrainingConfig } from "./algs";
 import {
 	applyLinuxDisplayBackendWorkaround,
 	isUsingLinuxXWaylandWorkaround,
@@ -85,9 +86,9 @@ import type {
 import { ProjectStore } from "./projects/ProjectStore";
 import { FileSystemService } from "./fs/FileSystemService";
 import { AgentManager } from "./agent/AgentManager";
-import { SdLocator } from "./agent/PiLocator";
-import { SdRpcClient, type RpcResponse } from "./agent/PiRpcClient";
-import { testPiProxy } from "./agent/PiProxyTester";
+import { SdLocator } from "./agent/SdLocator";
+import { SdRpcClient, type RpcResponse } from "./agent/SdRpcClient";
+import { testSdProxy } from "./agent/SdProxyTester";
 import { SessionScanner } from "./sessions/SessionScanner";
 import { CodexSessionImporter } from "./sessions/CodexSessionImporter";
 import { ClaudeSessionImporter } from "./sessions/ClaudeSessionImporter";
@@ -146,7 +147,7 @@ let openCodeSessionImporter: OpenCodeSessionImporter;
 let settingsStore: SettingsStore;
 let worktreeService: WorktreeService;
 let gitService: GitService;
-let piLocator: SdLocator;
+let sdLocator: SdLocator;
 let agentManager: AgentManager;
 let configManager: ConfigManager;
 let promptManager: PromptManager;
@@ -188,7 +189,7 @@ async function syncWslEnvironment(settings: AppSettings): Promise<WslEnvironment
 }
 
 /**
- * 解析 pi --list-models 表格输出为 AvailableModel[]。
+ * 解析 sd --list-models 表格输出为 AvailableModel[]。
  * 表格格式：provider  model  context  max-out  thinking  images
  */
 function parsePiListModels(stdout: string): Array<{ provider: string; id: string; name?: string; thinking: boolean; supportsImages: boolean }> {
@@ -781,10 +782,10 @@ async function createWindow() {
 	});
 	mainWindow.webContents.on("dom-ready", () => {
 		void mainWindow?.webContents
-			.executeJavaScript("Boolean(window.piDesktop)", true)
-			.then((hasPiDesktop) => {
+			.executeJavaScript("Boolean(window.snacodeDesktop)", true)
+			.then((hasSnacodeDesktop) => {
 				void appLogger.info("app", "Main window preload API availability", {
-					hasPiDesktop,
+					hasSnacodeDesktop,
 					url: mainWindow?.webContents.getURL(),
 				});
 			})
@@ -902,6 +903,61 @@ async function autoConnectFeishu() {
 	// 不再自动连接，由用户手动在配置页点击连接
 	// 避免应用重启后静默恢复连接导致用户困惑
 	console.log("[飞书] 检测到已保存的 Bot 配置:", bot.name, "(跳过自动连接，需手动连接)");
+}
+
+// ===== ALGS 系统 IPC 处理器 =====
+function registerAlgsIpc() {
+	const algs = getALGS();
+
+	// 提交 ALGS 任务
+	ipcMain.handle(ipcChannels.algsSubmitTask, async (_event, task: TaskInput) => {
+		return algs.submitTask(task);
+	});
+
+	// 获取 ALGS 任务状态
+	ipcMain.handle(ipcChannels.algsGetTaskStatus, async (_event, taskId: string) => {
+		return algs.getTaskStatus(taskId);
+	});
+
+	// 获取 ALGS 任务列表
+	ipcMain.handle(ipcChannels.algsGetTasks, async (_event, status?: string) => {
+		return algs.getTasks(status as any);
+	});
+
+	// 获取技能卡列表
+	ipcMain.handle(ipcChannels.algsGetSkillCards, async (_event, taskType?: string) => {
+		return algs.getSkillCards(taskType);
+	});
+
+	// 保存技能卡
+	ipcMain.handle(ipcChannels.algsSaveSkillCard, async (_event, card: any) => {
+		return algs.saveSkillCard(card);
+	});
+
+	// 删除技能卡
+	ipcMain.handle(ipcChannels.algsDeleteSkillCard, async (_event, id: string) => {
+		return algs.deleteSkillCard(id);
+	});
+
+	// 下载 LoRA 文件
+	ipcMain.handle(ipcChannels.algsDownloadLora, async (_event, url: string) => {
+		return algs.downloadLora(url);
+	});
+
+	// 获取 LoRA 列表
+	ipcMain.handle(ipcChannels.algsGetLoraList, async (_event, baseModel?: string) => {
+		return algs.getLoraList(baseModel);
+	});
+
+	// 触发 LoRA 微调任务
+	ipcMain.handle(ipcChannels.algsTriggerTraining, async (_event, config: TrainingConfig) => {
+		return algs.triggerTraining(config);
+	});
+
+	// 获取训练任务列表
+	ipcMain.handle(ipcChannels.algsGetTrainingJobs, async (_event, status?: string) => {
+		return algs.getTrainingJobs(status as any);
+	});
 }
 
 function registerFeishuIpc() {
@@ -1260,7 +1316,7 @@ function registerIpc() {
 		return project;
 	});
 	ipcMain.handle(ipcChannels.projectsRemove, async (_event, id: string) => {
-		// 删除前拦截：项目仍有运行中的 Agent（pi 子进程）时禁止删除，避免进程悬挂后台继续占用资源。
+		// 删除前拦截：项目仍有运行中的 Agent（sd 子进程）时禁止删除，避免进程悬挂后台继续占用资源。
 		if (agentManager.hasAgentForProject(id)) {
 			throw new Error("PROJECT_HAS_RUNNING_AGENT");
 		}
@@ -1290,7 +1346,7 @@ function registerIpc() {
 		void appLogger.info("project-resource", "Project skill deleted", { projectId, skillPath });
 	});
 	ipcMain.handle(ipcChannels.projectResourcesDeleteExtension, async (_event, projectId: string, extensionPath: string) => {
-		// 项目级 extension 是自动发现的本地文件/目录，删除时仅移除项目 .pi/extensions 下对应资源。
+		// 项目级 extension 是自动发现的本地文件/目录，删除时仅移除项目 .sd/extensions 下对应资源。
 		await projectResourceManager.deleteExtension(projectId, extensionPath);
 		void appLogger.info("project-resource", "Project extension deleted", { projectId, extensionPath });
 	});
@@ -1370,8 +1426,9 @@ function registerIpc() {
 
 	ipcMain.handle(ipcChannels.dialogPickFiles, async (_event, options?: { title?: string }) => {
 		const result = await dialog.showOpenDialog({
-			title: options?.title ?? "选择文件或文件夹",
-			properties: ["openFile", "openDirectory", "multiSelections"],
+			title: options?.title ?? "选择文件",
+			properties: ["openFile", "multiSelections"],
+			...(mainWindow ? { parent: mainWindow } : {}),
 		});
 		return result.canceled ? [] : result.filePaths;
 	});
@@ -1383,6 +1440,7 @@ function registerIpc() {
 			filters: [
 				{ name: "图片", extensions: ["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"] },
 			],
+			...(mainWindow ? { parent: mainWindow } : {}),
 		});
 		if (result.canceled) return [];
 
@@ -1637,7 +1695,7 @@ function registerIpc() {
 			agentManager.exportSessionHtml(projectId, filePath),
 	);
 	ipcMain.handle(ipcChannels.sessionsDelete, async (_event, filePath: string) => {
-		// 检查是否有活跃 Agent 正在使用该会话文件；如有则拒绝删除，避免 pi 进程访问已删除文件。
+		// 检查是否有活跃 Agent 正在使用该会话文件；如有则拒绝删除，避免 sd 进程访问已删除文件。
 		const normalizedTarget = filePath.replace(/\\/g, "/").toLowerCase();
 		const activeAgents = agentManager.list();
 		const usingAgent = activeAgents.find((agent) => {
@@ -1975,7 +2033,7 @@ function registerIpc() {
 		}
 
 		const settings = settingsStore.get();
-		const invocation = piLocator.createInvocation(command, [
+		const invocation = sdLocator.createInvocation(command, [
 			"--mode", "rpc",
 			"--no-session",
 			"--no-tools",
@@ -1991,7 +2049,7 @@ function registerIpc() {
 
 		genProcess = spawn(invocation.command, invocation.args, {
 			cwd: projectPath,
-			env: piLocator.createProcessEnv(settings, invocation.pathPrefix, invocation.wsl),
+			env: sdLocator.createProcessEnv(settings, invocation.pathPrefix, invocation.wsl),
 			stdio: ["pipe", "pipe", "pipe"],
 			shell: invocation.shell,
 			windowsHide: true,
@@ -2030,8 +2088,8 @@ function registerIpc() {
 	async function quickGenerate(projectPath: string, prompt: string): Promise<string> {
 		console.log("[QuickGen] quickGenerate called", { projectPath });
 		const settings = settingsStore.get();
-		const command = piLocator.resolveCommand(
-			settings.customPiPath,
+		const command = sdLocator.resolveCommand(
+			settings.customSdPath,
 			settings.wslEnabled,
 			settings.wslDistro,
 			settings.wslUser,
@@ -2180,11 +2238,11 @@ function registerIpc() {
 		},
 	);
 
-	ipcMain.handle(ipcChannels.piCheck, async () => {
+	ipcMain.handle(ipcChannels.sdCheck, async () => {
 		// 用户手动指定的路径优先于自动检测
 		const settings = settingsStore.get();
-		const status = await piLocator.check(settings.customPiPath, settings.wslEnabled, settings.wslDistro, settings.wslUser);
-		void appLogger.info("pi", "Pi check completed", {
+		const status = await sdLocator.check(settings.customSdPath, settings.wslEnabled, settings.wslDistro, settings.wslUser);
+		void appLogger.info("sd", "Sd check completed", {
 			installed: status.installed,
 			version: status.version,
 			command: status.command,
@@ -2192,29 +2250,29 @@ function registerIpc() {
 		});
 		return status;
 	});
-	// 从 pi --list-models 获取可用模型列表（无需启动 agent）
+	// 从 sd --list-models 获取可用模型列表（无需启动 agent）
 	// 全局缓存：首次运行后复用，避免每次打开选择器都 fork 子进程
 	let cachedListModels: ReturnType<typeof parsePiListModels> | null = null;
 	let cachedListModelsPending: Promise<ReturnType<typeof parsePiListModels>> | null = null;
 	ipcMain.handle(ipcChannels.projectsListModels, async (_event, projectId?: string) => {
 		try {
 			if (cachedListModels) return cachedListModels;
-			// 已有在途请求时复用同一个 Promise，避免并发 fork 多个 pi 进程
+			// 已有在途请求时复用同一个 Promise，避免并发 fork 多个 sd 进程
 			if (cachedListModelsPending) return cachedListModelsPending;
 
 			cachedListModelsPending = (async () => {
 				const settings = settingsStore.get();
-				const command = piLocator.resolveCommand(
-					settings.customPiPath,
+				const command = sdLocator.resolveCommand(
+					settings.customSdPath,
 					settings.wslEnabled,
 					settings.wslDistro,
 					settings.wslUser,
 				);
-				const invocation = piLocator.createInvocation(command, ["--list-models"]);
+				const invocation = sdLocator.createInvocation(command, ["--list-models"]);
 				const { execFile } = await import("node:child_process");
 				const result = await new Promise<{ stdout: string }>((resolve, reject) => {
 					execFile(invocation.command, invocation.args, {
-						env: piLocator.createProcessEnv(settings, invocation.pathPrefix, invocation.wsl),
+						env: sdLocator.createProcessEnv(settings, invocation.pathPrefix, invocation.wsl),
 						shell: invocation.shell,
 						windowsHide: true,
 						timeout: 15_000,
@@ -2237,7 +2295,7 @@ function registerIpc() {
 			return models;
 		} catch (error) {
 			cachedListModelsPending = null;
-			void appLogger.warn("pi", "Failed to list models", {
+			void appLogger.warn("sd", "Failed to list models", {
 				error: error instanceof Error ? error.message : String(error),
 			});
 			return [];
@@ -2274,10 +2332,10 @@ function registerIpc() {
 			});
 		} catch { return [] as string[]; }
 	});
-	// WSL: 验证连接性 — 分步检查 distro+user 可达性 和 pi 可用性
+	// WSL: 验证连接性 — 分步检查 distro+user 可达性 和 sd 可用性
 	ipcMain.handle(ipcChannels.wslValidateConnection, async (_event, distro: string, user: string) => {
 		if (process.platform !== "win32") {
-			return { ok: false, whoami: "", piVersion: "", error: "WSL 仅在 Windows 上可用" };
+			return { ok: false, whoami: "", sdVersion: "", error: "WSL 仅在 Windows 上可用" };
 		}
 		try {
 			const { execFile } = await import("node:child_process");
@@ -2290,53 +2348,53 @@ function registerIpc() {
 						resolve(stdout.trim());
 					});
 			});
-			// Step 2: 检查 pi 是否已安装
-			let piVersion = "";
+			// Step 2: 检查 sd 是否已安装
+			let sdVersion = "";
 			try {
-				piVersion = await new Promise<string>((resolve, reject) => {
-					execFile(wslExePath, ["-d", distro, "-u", user, "pi", "--version"],
+				sdVersion = await new Promise<string>((resolve, reject) => {
+					execFile(wslExePath, ["-d", distro, "-u", user, "sd", "--version"],
 						{ encoding: "utf8", timeout: 10_000, windowsHide: true, shell: wslShell },
 						(err, stdout) => {
 							if (err) { reject(err); return; }
 							resolve(stdout.trim());
 						});
 				});
-			} catch { /* pi 未安装，piVersion 保持空 */ }
+			} catch { /* sd 未安装，sdVersion 保持空 */ }
 			return {
 				ok: true,
 				whoami,
-				piVersion,
-				error: piVersion ? "" : "pi CLI 未安装 — 请在 WSL 中运行 npm i -g @earendil-works/pi",
+				sdVersion,
+				error: sdVersion ? "" : "sd CLI 未安装 — 请在 WSL 中运行 npm i -g @snacode/sd-coding-agent",
 			};
 		} catch (err) {
 			return {
 				ok: false,
 				whoami: "",
-				piVersion: "",
+				sdVersion: "",
 				error: `无法连接到 WSL 发行版 "${distro}" 用户 "${user}"：${err instanceof Error ? err.message : String(err)}`,
 			};
 		}
 	});
-	ipcMain.handle(ipcChannels.piUpdateCheck, async () => {
-		const result = await extensionManager.checkPiUpdate();
-		void appLogger.info("pi", "Pi update check completed", { currentVersion: result.currentVersion, latestVersion: result.latestVersion, hasUpdate: result.hasUpdate, error: result.error });
+	ipcMain.handle(ipcChannels.sdUpdateCheck, async () => {
+			const result = await extensionManager.checkSdUpdate();
+		void appLogger.info("sd", "sd update check completed", { currentVersion: result.currentVersion, latestVersion: result.latestVersion, hasUpdate: result.hasUpdate, error: result.error });
 		return result;
 	});
-	ipcMain.handle(ipcChannels.piUpdate, async () => {
-		const result = await extensionManager.updatePi();
-		void appLogger.info("pi", "Pi update command completed", { updated: result.updated, bytes: result.output.length });
+	ipcMain.handle(ipcChannels.sdUpdate, async () => {
+		const result = await extensionManager.updateSd();
+		void appLogger.info("sd", "sd update command completed", { updated: result.updated, bytes: result.output.length });
 		return result;
 	});
 	ipcMain.handle(
-		ipcChannels.piCheckCustom,
+		ipcChannels.sdCheckCustom,
 		async (_event, customPath: string) => {
-			const status = await piLocator.validateCustomPath(customPath);
-			// 校验通过后持久化归一化后的路径，后续启动 agent 时 PiProcess 会从 settings 读取。
-			// 例如用户粘贴 "D:\\foo\\pi" 时，PiLocator 会返回可执行的 D:\foo\pi.cmd。
+			const status = await sdLocator.validateCustomPath(customPath);
+			// 校验通过后持久化归一化后的路径，后续启动 agent 时 SdProcess 会从 settings 读取。
+			// 例如用户粘贴 "D:\\foo\\sd" 时，SdLocator 会返回可执行的 D:\foo\sd.cmd。
 			if (status.installed && status.command) {
-				await settingsStore.update({ customPiPath: status.command });
+				await settingsStore.update({ customSdPath: status.command });
 			}
-			void appLogger.info("pi", "Custom pi path checked", {
+			void appLogger.info("sd", "Custom sd path checked", {
 				installed: status.installed,
 				version: status.version,
 				command: status.command,
@@ -2348,13 +2406,13 @@ function registerIpc() {
 
 	/**
 	 * 执行 npm install 安装命令，返回 stdout/stderr/exitCode。
-	 * 用于首次安装向导中让用户一键安装 pi CLI。
+	 * 用于首次安装向导中让用户一键安装 sd CLI。
 	 * 使用 execFile 而非 spawn 以确保命令执行完毕后一次性返回完整输出。
 	 */
 	ipcMain.handle(
-		ipcChannels.piExecInstall,
+		ipcChannels.sdExecInstall,
 		async (_event, command: string): Promise<import("../shared/types").AgentInstallExecResult> => {
-			void appLogger.info("pi", "Executing install command", { command });
+			void appLogger.info("sd", "Executing install command", { command });
 			try {
 				const { execFile } = await import("node:child_process");
 				const result = await new Promise<import("../shared/types").AgentInstallExecResult>((resolve) => {
@@ -2405,7 +2463,7 @@ function registerIpc() {
 						);
 					}
 				});
-				void appLogger.info("pi", "Install command completed", {
+				void appLogger.info("sd", "Install command completed", {
 					success: result.success,
 					exitCode: result.exitCode,
 					stdoutLength: result.stdout.length,
@@ -2414,7 +2472,7 @@ function registerIpc() {
 				return result;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				void appLogger.error("pi", "Install command threw", { error: message });
+				void appLogger.error("sd", "Install command threw", { error: message });
 				return { success: false, exitCode: -1, stdout: "", stderr: message };
 			}
 		},
@@ -2426,7 +2484,7 @@ function registerIpc() {
 	 * 用于首次安装向导中判断是否应显示 npm install 按钮或引导安装 Node.js。
 	 */
 	ipcMain.handle(
-		ipcChannels.piCheckNpm,
+		ipcChannels.sdCheckNpm,
 		async (): Promise<import("../shared/types").NpmAvailabilityResult> => {
 			try {
 				const { execFile } = await import("node:child_process");
@@ -2546,8 +2604,8 @@ function registerIpc() {
 		await shell.openPath(dir);
 	});
 	ipcMain.handle(ipcChannels.appFeedbackEnvironment, async () => {
-		// 反馈报告只包含诊断必需的运行时版本与 pi 检测结果，不读取配置密钥或会话内容。
-		const pi = await piLocator.check();
+		// 反馈报告只包含诊断必需的运行时版本与 sd 检测结果，不读取配置密钥或会话内容。
+		const sd = await sdLocator.check();
 		return {
 			appVersion: app.getVersion(),
 			platform: process.platform,
@@ -2555,7 +2613,7 @@ function registerIpc() {
 			electronVersion: process.versions.electron ?? "",
 			chromeVersion: process.versions.chrome ?? "",
 			nodeVersion: process.versions.node,
-			pi,
+			sd,
 		};
 	});
 	ipcMain.handle(ipcChannels.appOpenExternal, async (_event, url: string, forceSystem?: boolean) => {
@@ -2643,10 +2701,10 @@ function registerIpc() {
 		},
 	);
 	ipcMain.handle(
-		ipcChannels.settingsTestPiProxy,
+		ipcChannels.settingsTestSdProxy,
 		async () => {
-			const result = await testPiProxy(settingsStore.get());
-			void appLogger.info("settings", "Pi proxy tested", {
+			const result = await testSdProxy(settingsStore.get());
+			void appLogger.info("settings", "SD proxy tested", {
 				success: result.success,
 				elapsedMs: result.elapsedMs,
 				statusCode: result.statusCode,
@@ -2801,7 +2859,7 @@ function registerIpc() {
 
 	/**
 	 * 将 prompts.chat 的命名变量（${name} / ${name:default}）
-	 * 转换为 pi 的位置参数（$N / ${N:-default}）。
+	 * 转换为 sd 的位置参数（$N / ${N:-default}）。
 	 * 同时生成 argument-hint。
 	 */
 	function convertStoreVarsToPiVars(content: string): { converted: string; argumentHint: string; varCount: number } {
@@ -2875,7 +2933,7 @@ function registerIpc() {
 				.replace(/^-|-$/g, "");
 			if (!name) throw new Error("标题中未提取到有效文件名");
 
-			// 转换变量格式：prompts.chat 的 ${name} → pi 的 $N
+			// 转换变量格式：prompts.chat 的 ${name} → sd 的 $N
 			const { converted, argumentHint, varCount } = convertStoreVarsToPiVars(content);
 
 			// 使用 PromptManager.create 来创建，统一命名规范
@@ -2933,7 +2991,7 @@ function registerIpc() {
 	});
 
 	/** 从 prompts.chat 导入为本地 skill */
-	ipcMain.handle(ipcChannels.skillStoreImport, async (_event, item: PromptStoreItem, locationId: "pi-global" | "agents-global" = "pi-global") => {
+	ipcMain.handle(ipcChannels.skillStoreImport, async (_event, item: PromptStoreItem, locationId: "snacode-global" | "agents-global" = "snacode-global") => {
 		try {
 			const name = item.title
 				.trim()
@@ -2945,11 +3003,11 @@ function registerIpc() {
 
 			const { writeFile } = await import("node:fs/promises");
 
-			// 用 SkillManager 创建 skill（默认 pi-global，用户可通过 dropdown 切换）
+			// 用 SkillManager 创建 skill（默认 snacode-global，用户可通过 dropdown 切换）
 			const summary = await skillManager.create({
 				name,
 				description: item.description || item.title,
-				locationId: locationId ?? "pi-global",
+				locationId: locationId ?? "snacode-global",
 			});
 
 			// 覆盖 SKILL.md 为实际内容
@@ -3059,8 +3117,8 @@ function registerIpc() {
 
 	ipcMain.handle(ipcChannels.yaoPromptsImport, async (_event, slug: string, category: string) => {
 		try {
-			const result = await xuePromptManager.importToPi(slug, category);
-			void appLogger.info("yao-prompts", "Imported to pi templates", { slug, localName: result.name });
+			const result = await xuePromptManager.importToSd(slug, category);
+			void appLogger.info("yao-prompts", "Imported to sd templates", { slug, localName: result.name });
 			return result;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
@@ -3069,7 +3127,7 @@ function registerIpc() {
 		}
 	});
 
-	// forceRefresh=true 时跳过内存缓存，重新跑 pi list 并查 npm 版本；默认走缓存。
+	// forceRefresh=true 时跳过内存缓存，重新跑 sd list 并查 npm 版本；默认走缓存。
 	ipcMain.handle(ipcChannels.extensionsList, (_event, forceRefresh?: boolean) =>
 		extensionManager.list(Boolean(forceRefresh)),
 	);
@@ -3093,7 +3151,7 @@ function registerIpc() {
 				// 启用：确保 .ts 文件存在（处理老版本误删文件的恢复场景）
 				await ensureSnacodeExtension(source, activeWslEnvironment?.windowsHome);
 			}
-			// 禁用时不删除 .ts 文件：通过 settings.json 的 disabledExtensions 控制 pi 加载即可
+			// 禁用时不删除 .ts 文件：通过 settings.json 的 disabledExtensions 控制 sd 加载即可
 		}
 		await extensionManager.setEnabled(source, enabled);
 		void appLogger.info("extension", "Extension toggled", { source, enabled });
@@ -3381,6 +3439,17 @@ function registerIpc() {
 		(_event, requestId: string, choice: "trust-remember" | "trust-session" | "deny") =>
 			agentManager.respondTrustRequest(requestId, choice),
 	);
+
+	// 执行 MCP 工具调用
+	ipcMain.handle(ipcChannels.agentsInvokeTool, async (_event, agentId: string, toolName: string, args: Record<string, unknown>) => {
+		return agentManager.invokeTool(agentId, toolName, args);
+	});
+
+	// 执行 Skill 调用
+	ipcMain.handle(ipcChannels.agentsInvokeSkill, async (_event, agentId: string, skillName: string, args?: Record<string, unknown>) => {
+		return agentManager.invokeSkill(agentId, skillName, args);
+	});
+
 	ipcMain.handle(ipcChannels.configSaveModels, async (_event, data) => {
 		const result = await configManager.saveModelsConfig(data);
 		void appLogger.info("config", "Models config saved", { providerCount: Object.keys(data?.providers ?? {}).length });
@@ -3393,7 +3462,7 @@ function registerIpc() {
 	});
 	ipcMain.handle(ipcChannels.configSaveSettings, async (_event, settings) => {
 		const result = await configManager.saveSettingsConfig(settings);
-		void appLogger.info("config", "Pi settings config saved", { keys: Object.keys(settings ?? {}) });
+		void appLogger.info("config", "Sd settings config saved", { keys: Object.keys(settings ?? {}) });
 		return result;
 	});
 	ipcMain.handle(ipcChannels.configSaveRaw, async (_event, fileName, rawJson) => {
@@ -3511,7 +3580,7 @@ async function detectExternalEditorsOnFirstLaunch() {
 	void appLogger.info("editor", "External editors detected on first launch", { count: detected.length });
 }
 
-// ── 持久化轻量 pi RPC 进程（用于快速文本生成，避免每次启动开销） ──────
+// ── 持久化轻量 sd RPC 进程（用于快速文本生成，避免每次启动开销） ──────
 let genProcess: ChildProcess | null = null;
 let genRpcClient: SdRpcClient | null = null;
 let genProcessCwd = "";
@@ -3543,10 +3612,10 @@ function resetGenIdleTimer() {
 }
 
 app.whenReady().then(async () => {
-	// PiDeck → Snacode 数据迁移
-	const migration = new PiDeckMigration();
-	if (await migration.needsMigration()) {
-		console.log("[Snacode] Detected PiDeck data, starting migration...");
+	// SdDeck → Snacode 数据迁移
+		const migration = new SdDeckMigration();
+		if (await migration.needsMigration()) {
+			console.log("[Snacode] Detected SdDeck data, starting migration...");
 		const result = await migration.migrate();
 		if (result.success) {
 			console.log(`[Snacode] Migration completed: ${result.migratedFiles.length} files migrated`);
@@ -3566,12 +3635,12 @@ app.whenReady().then(async () => {
 	rpcLogger = new RpcLogger();
 	gitService = new GitService();
 	worktreeService = new WorktreeService();
-	piLocator = new SdLocator();
+	sdLocator = new SdLocator();
 	configManager = new ConfigManager();
 	promptManager = new PromptManager();
 	xuePromptManager = new XuePromptManager();
 	skillManager = new SkillManager();
-	extensionManager = new ExtensionManager(piLocator, () => settingsStore.get());
+	extensionManager = new ExtensionManager(sdLocator, () => settingsStore.get());
 	projectResourceManager = new ProjectResourceManager((projectId) => projectStore.get(projectId));
 	agentManager = new AgentManager(
 		(id) => projectStore.get(id),
@@ -3618,6 +3687,7 @@ app.whenReady().then(async () => {
 	await settingsStore.load();
 	registerIpc();
 	registerFeishuIpc();
+	registerAlgsIpc();
 	await createWindow();
 	setupTray();
 
@@ -3644,9 +3714,9 @@ app.whenReady().then(async () => {
  */
 async function runPostWindowStartupTasks(): Promise<void> {
 	// 自动部署 Snacode 内置扩展：这些扩展提供桌面端差异预览、提问卡片和 Plan Mode。
-	// Windows 和 WSL 环境各自部署一份，保证切换 pi 来源后扩展仍然可用。
+	// Windows 和 WSL 环境各自部署一份，保证切换 sd 来源后扩展仍然可用。
 	const deployExtensionsTo = async (homeDir: string) => {
-		const extDisabledPath = join(homeDir, ".pi", "agent", "settings.json");
+		const extDisabledPath = join(homeDir, ".sd", "agent", "settings.json");
 		const disabledExtList: string[] = await readFile(extDisabledPath, "utf-8")
 			.then((raw: string) => JSON.parse(raw).disabledExtensions ?? [])
 			.catch(() => [] as string[]);
@@ -3676,6 +3746,10 @@ async function runPostWindowStartupTasks(): Promise<void> {
 			arch: process.arch,
 			installationType: settingsStore.get().installationType,
 		}),
+		// 初始化 ALGS 系统
+		getALGS().init().catch((error) => {
+			console.error("Failed to initialize ALGS system:", error);
+		}),
 	]);
 
 	// WSL 启用时额外部署到动态解析出的 HOME。
@@ -3685,12 +3759,12 @@ async function runPostWindowStartupTasks(): Promise<void> {
 		});
 	}
 
-	// 补齐 pi settings.json 缺失的默认配置项，新安装或精简配置的用户无需手动添加。
-	void ensureAllPiSettingsDefaults().catch((error) => {
-		console.error("Failed to ensure pi settings defaults:", error);
+	// 补齐 sd settings.json 缺失的默认配置项，新安装或精简配置的用户无需手动添加。
+	void ensureAllSdSettingsDefaults().catch((error) => {
+		console.error("Failed to ensure sd settings defaults:", error);
 	});
 
-	// 清理已废弃的 snacode-project-trust 扩展：RPC 模式下 pi 的 project_trust 事件 hasUI 恒为 false，
+	// 清理已废弃的 snacode-project-trust 扩展：RPC 模式下 sd 的 project_trust 事件 hasUI 恒为 false，
 	// 该扩展无法弹窗，信任确认改由桌面端 AgentManager.ensureProjectTrust 自行处理，删除残留避免用户误解。
 	void removeStaleSnacodeExtension("snacode-project-trust.ts").catch((error) => {
 		console.error("Failed to remove stale snacode-project-trust extension:", error);
@@ -3755,12 +3829,12 @@ async function runPostWindowStartupTasks(): Promise<void> {
 }
 
 /**
- * 将 Snacode 内置的 pi 扩展部署到用户扩展目录，使 pi 自动加载。
+ * 将 Snacode 内置的 sd 扩展部署到用户扩展目录，使 sd 自动加载。
  * 仅在目标文件不存在或内容不一致时覆盖写入，避免不必要的磁盘操作。
  */
 async function ensureSnacodeExtension(extensionName: string, wslHome?: string): Promise<void> {
 	const home = wslHome ?? app.getPath("home");
-	const extensionsDir = join(home, ".pi", "agent", "extensions");
+	const extensionsDir = join(home, ".sd", "agent", "extensions");
 	const targetPath = join(extensionsDir, extensionName);
 
 	// 获取源文件路径：开发模式下在 resources/ 目录，打包后通过 process.resourcesPath 访问
@@ -3786,22 +3860,22 @@ async function ensureSnacodeExtension(extensionName: string, wslHome?: string): 
 
 /**
  * 删除已下线的 Snacode 内置扩展残留文件（如 snacode-project-trust.ts）。
- * 用于扩展废弃后清理用户扩展目录，避免 pi 仍加载无效扩展造成误解。
+ * 用于扩展废弃后清理用户扩展目录，避免 sd 仍加载无效扩展造成误解。
  * rm 的 force 选项会在文件不存在时静默忽略。
  */
 async function removeStaleSnacodeExtension(extensionName: string): Promise<void> {
-	const targetPath = join(app.getPath("home"), ".pi", "agent", "extensions", extensionName);
+	const targetPath = join(app.getPath("home"), ".sd", "agent", "extensions", extensionName);
 	await rm(targetPath, { force: true });
 	console.log(`[Snacode] Removed stale extension: ${targetPath}`);
 }
 
 /**
- * 补齐 pi 全局 settings.json 的推荐默认项。
+ * 补齐 sd 全局 settings.json 的推荐默认项。
  * 仅添加缺失的 key，不覆盖用户已有配置。
- * 适用于新安装 pi 或配置精简的用户。
+ * 适用于新安装 sd 或配置精简的用户。
  */
 /** 补齐指定 configDir 下 settings.json 的缺失默认项 */
-async function ensurePiSettingsDefaults(configDir: string, piVersionHint?: string): Promise<void> {
+async function ensureSdSettingsDefaults(configDir: string, sdVersionHint?: string): Promise<void> {
 	const filePath = join(configDir, "settings.json");
 	let current: Record<string, unknown> = {};
 	try {
@@ -3818,8 +3892,8 @@ async function ensurePiSettingsDefaults(configDir: string, piVersionHint?: strin
 		retry: { enabled: true, maxRetries: 3 },
 	};
 
-	if (piVersionHint && !current.lastChangelogVersion) {
-		current.lastChangelogVersion = piVersionHint;
+	if (sdVersionHint && !current.lastChangelogVersion) {
+		current.lastChangelogVersion = sdVersionHint;
 		changed = true;
 	}
 
@@ -3833,26 +3907,26 @@ async function ensurePiSettingsDefaults(configDir: string, piVersionHint?: strin
 	if (changed) {
 		await mkdir(configDir, { recursive: true });
 		await writeFile(filePath, JSON.stringify(current, null, 2), "utf8");
-		console.log('[Snacode] Ensured pi settings defaults at:', filePath);
+		console.log('[Snacode] Ensured sd settings defaults at:', filePath);
 	}
 }
 
 /** 对当前环境和 WSL 环境（如果启用）都补齐 settings.json 默认项 */
-async function ensureAllPiSettingsDefaults(): Promise<void> {
+async function ensureAllSdSettingsDefaults(): Promise<void> {
 	const s = settingsStore.get();
-	let piVersion = "";
-	if (piLocator) {
-		piVersion = (await piLocator.check(undefined, s.wslEnabled, s.wslDistro, s.wslUser).catch(() => null))?.version ?? "";
+	let sdVersion = "";
+	if (sdLocator) {
+		sdVersion = (await sdLocator.check(undefined, s.wslEnabled, s.wslDistro, s.wslUser).catch(() => null))?.version ?? "";
 	}
 
 	// Windows 本地
-	const winDir = join(app.getPath("home"), ".pi", "agent");
-	await ensurePiSettingsDefaults(winDir, piVersion).catch(() => {});
+	const winDir = join(app.getPath("home"), ".sd", "agent");
+	await ensureSdSettingsDefaults(winDir, sdVersion).catch(() => {});
 
 	// WSL（如果已配置）
 	if (activeWslEnvironment) {
-		const wslDir = join(activeWslEnvironment.windowsHome, ".pi", "agent");
-		await ensurePiSettingsDefaults(wslDir, piVersion).catch(() => {});
+		const wslDir = join(activeWslEnvironment.windowsHome, ".sd", "agent");
+		await ensureSdSettingsDefaults(wslDir, sdVersion).catch(() => {});
 	}
 }
 

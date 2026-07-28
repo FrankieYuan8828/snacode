@@ -1,4 +1,4 @@
-import {
+﻿import {
 	Fragment,
 	isValidElement,
 	memo,
@@ -19,8 +19,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
-import { PiLogoCanvas } from "./PiLogoCanvas";
-import { SnakeLogo } from "../ui/SnakeLogo";
+import { SdLogoCanvas } from "./SdLogoCanvas";
 import {
 	summarizeMessage,
 	type ToolGroupItem,
@@ -167,7 +166,7 @@ export function EnvironmentDialog(props: {
 	onClose: () => void;
 	onRecheck: () => void;
 	onOpenInstallDocs: () => void;
-	/** 用户手动输入的 pi 路径 */
+	/** 用户手动输入的 sd 路径 */
 	customPath: string;
 	/** 正在校验自定义路径 */
 	customPathValidating: boolean;
@@ -194,7 +193,7 @@ export function EnvironmentDialog(props: {
 	onToggleInstallMirror: () => void;
 	onExecInstall: () => void;
 	onRestartApp: () => void;
-	/** 重置 piEnvironmentChecked 标记，使下次启动重新触发环境检测 */
+	/** 重置 sdEnvironmentChecked 标记，使下次启动重新触发环境检测 */
 	onClearCheckFlag?: () => void;
 }) {
 	const installed = props.status?.installed || props.customPathResult?.installed;
@@ -209,7 +208,7 @@ export function EnvironmentDialog(props: {
 	const activeStep = props.checking ? 0 : installed ? 3 : 1;
 
 	// Windows 统一使用 CMD 查找 .cmd/.exe shim，不再引导用户使用 PowerShell 的 .ps1 入口。
-	const refCmd = 'where pi';
+	const refCmd = 'where sd';
 
 	return (
 		<Modal
@@ -272,7 +271,7 @@ export function EnvironmentDialog(props: {
 								</div>
 							)}
 
-							{/* npm 安装 pi 卡片（合并了安装指引） */}
+							{/* npm 安装 sd 卡片（合并了安装指引） */}
 							<div className="env-card env-npm-install-card">
 								<strong>{t("environment.installCardTitle")}</strong>
 								<small>{t("environment.installCardDesc")}</small>
@@ -327,7 +326,7 @@ export function EnvironmentDialog(props: {
 													props.onInstallCommandChange(e.target.value)
 												}
 												disabled={props.installExecuting}
-												placeholder="npm install -g @earendil-works/pi-coding-agent"
+												placeholder="npm install -g @snacode/sd-coding-agent"
 											/>
 										</div>
 										<div className="env-install-actions">
@@ -408,7 +407,7 @@ export function EnvironmentDialog(props: {
 										<button
 											className="env-card-btn"
 											onClick={() =>
-												window.piDesktop.app.openExternal(
+												window.snacodeDesktop.app.openExternal(
 													"https://nodejs.org/zh-cn/download/"
 												)
 											}
@@ -419,7 +418,7 @@ export function EnvironmentDialog(props: {
 								)}
 							</div>
 
-							{/* 手动输入 pi 路径卡片 */}
+							{/* 手动输入 sd 路径卡片 */}
 							<div className="env-card env-custom-card">
 								<strong>{t("environment.customPathTitle")}</strong>
 								<small>{t("environment.customPathDesc")}</small>
@@ -433,7 +432,7 @@ export function EnvironmentDialog(props: {
 								<div className="custom-path-input-row">
 									<input
 										type="text"
-										placeholder="D:\\mise-data\\installs\\node\\24 13 0\\pi.cmd"
+										placeholder="C:\\Users\\YourName\\AppData\\Roaming\\npm\\sd.cmd"
 										value={props.customPath}
 										onChange={(e) =>
 											props.onCustomPathChange(e.target.value)
@@ -458,7 +457,7 @@ export function EnvironmentDialog(props: {
 										className={`custom-path-result ${props.customPathResult.installed ? "success" : "error"}`}
 									>
 										{props.customPathResult.installed
-											? `✓ ${t("environment.validatePassed", { value: props.customPathResult.version ?? "pi" })}`
+											? `✓ ${t("environment.validatePassed", { value: props.customPathResult.version ?? "sd" })}`
 											: `✗ ${t("environment.validateFailed", { value: props.customPathResult.error ?? t("environment.unableToRun") })}`}
 									</div>
 								)}
@@ -639,7 +638,7 @@ export function ExtensionWidgetCard(props: {
 const HUNGRY_THRESHOLD = 0.15;
 const ARCHIVE_THRESHOLD = 0.1;
 // 仅作为路径片段，实际拼接用 joinMemoryStorePath，兼容 Windows 反斜杠。
-const MEM_STORE_SEGMENTS = [".pi", "agent", "memory-store.json"] as const;
+const MEM_STORE_SEGMENTS = [".sd", "agent", "memory-store.json"] as const;
 
 const TYPE_LABEL_KEYS: Record<string, TranslationKey> = {
 	decision: "mem.type.decision",
@@ -692,7 +691,7 @@ interface MemoryStore {
 /**
  * MemSpacedCard — 记忆管理卡片
  *
- * 直接从 ~/.pi/agent/memory-store.json 读取记忆数据，展示概览统计、低效记忆和全部记忆列表。
+ * 直接从 ~/.sd/agent/memory-store.json 读取记忆数据，展示概览统计、低效记忆和全部记忆列表。
  * 支持手动刷新、AI 整理记忆库入口。
  */
 export const MemSpacedCard = memo(function MemSpacedCard(props: {
@@ -714,7 +713,7 @@ export const MemSpacedCard = memo(function MemSpacedCard(props: {
 		if (!storePath) return;
 		setLoading(true);
 		try {
-			const raw = await window.piDesktop.files.readContent(storePath);
+			const raw = await window.snacodeDesktop.files.readContent(storePath);
 			if (!raw || raw.trim() === "") {
 				setData(null);
 				return;
@@ -888,7 +887,7 @@ export const MemSpacedCard = memo(function MemSpacedCard(props: {
 									className="mem-org-btn"
 									title={t("mem.card.organizeTitle")}
 									onClick={() => {
-										window.piDesktop.agents.prompt({
+										window.snacodeDesktop.agents.prompt({
 											agentId: props.agentId!,
 											message: t("mem.card.organizePrompt"),
 											description: t("mem.card.organizeDescription"),
@@ -1289,7 +1288,7 @@ export function ModelPicker(props: {
 
 export const THINKING_LEVELS = [
 	{ value: "off", labelKey: "thinking.levelLabel.off", descriptionKey: "thinking.level.off" },
-	// minimal 是 pi/Codex reasoning 的最轻量档位,放在 Off 与 Low 之间便于按强度递增选择。
+	// minimal 是 sd/Codex reasoning 的最轻量档位,放在 Off 与 Low 之间便于按强度递增选择。
 	{ value: "minimal", labelKey: "thinking.levelLabel.minimal", descriptionKey: "thinking.level.minimal" },
 	{ value: "low", labelKey: "thinking.levelLabel.low", descriptionKey: "thinking.level.low" },
 	{ value: "medium", labelKey: "thinking.levelLabel.medium", descriptionKey: "thinking.level.medium" },
@@ -1405,7 +1404,7 @@ export function ThinkingPicker(props: {
 }
 
 /**
- * Prompt Template 选择器：列出 ~/.pi/agent/prompts/ 下所有 .md 模板，
+ * Prompt Template 选择器：列出 ~/.sd/agent/prompts/ 下所有 .md 模板，
  * 点击后将模板内容插入到 composer 输入框。
  */
 export function PromptTemplatePicker(props: {
@@ -1541,40 +1540,35 @@ function formatCompact(value?: number | null) {
 }
 
 /** Snacode 品牌几何路径（与 boot / Agent 头像共用，勿随意改形） */
-const PI_LOGO_PATH_MAIN =
-	"M165.29 165.29H517.36V400H400V517.36H282.65V634.72H165.29ZM282.65 282.65V400H400V282.65Z";
-const PI_LOGO_PATH_CORNER = "M517.36 400H634.72V634.72H517.36Z";
+const SNACODE_LOGO_PATH =
+	"M184.421,320C184.421,333.488 173.488,344.421 160,344.421C146.512,344.421 135.579,333.488 135.579,320C135.579,283.746 152.813,262.909 178.644,249.812C198.497,239.746 224.844,235.148 251.315,231.108C268.789,228.441 286.295,225.968 300.972,220.888C314.691,216.139 325.579,208.848 325.579,192C325.579,175.36 314.711,167.952 301.021,163.246C278.398,155.47 249.258,153.94 223.403,150.221C201.81,147.114 182.161,142.445 167.766,134.329C147.827,123.087 135.579,106.235 135.579,80C135.579,66.512 146.512,55.579 160,55.579C173.488,55.579 184.421,66.512 184.421,80C184.421,88.437 190.739,91.925 198.254,94.74C214.531,100.836 236.294,102.704 257.998,105.388C284.632,108.682 311.15,113.066 331.126,122.931C357.178,135.797 374.421,156.533 374.421,192C374.421,227.82 357.153,248.347 331.111,261.186C311.327,270.939 285.064,275.366 258.685,279.392C241.285,282.048 223.849,284.575 209.233,289.78C195.306,294.74 184.421,302.547 184.421,320Z";
 
 export function LogoMark() {
 	return (
 		<div className="logo-mark" aria-label={t("app.logoLabel")}>
-			<svg viewBox="140 140 520 520" width="22" height="22" aria-hidden="true">
-				<path
-					fill="#fff"
-					fillRule="evenodd"
-					d={PI_LOGO_PATH_MAIN}
-				/>
-				<path fill="#fff" d={PI_LOGO_PATH_CORNER} />
+			<svg viewBox="0 0 512 512" width="22" height="22" aria-hidden="true">
+				<defs>
+					<linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stopColor="#34a853"/>
+						<stop offset="100%" stopColor="#4285f4"/>
+					</linearGradient>
+				</defs>
+				<path fill="url(#logoGradient)" d={SNACODE_LOGO_PATH}/>
 			</svg>
 		</div>
 	);
 }
 
-// 官方 pi 风格 canvas logo（侧栏可点击重播）
-export { PiLogoCanvas } from "./PiLogoCanvas";
+// Snacode canvas logo（侧栏可点击重播）
+export { SdLogoCanvas } from "./SdLogoCanvas";
 
 /**
- * 侧栏品牌 lockup：贪吃蛇动画标 + Snacode 字标，垂直居中平齐。
- * state 控制蛇的状态：idle/thinking/working/executing/chatting
+ * 侧栏品牌 lockup：Snacode logo + 字标，垂直居中平齐。
  */
-export function BrandLockup(props: { state?: "idle" | "thinking" | "working" | "executing" | "chatting" } = {}) {
+export function BrandLockup() {
 	return (
 		<div className="brand-lockup" aria-label="Snacode">
-			{/* 34px：比字标略大，仍保持侧栏紧凑 */}
-			<SnakeLogo
-				size={34}
-				state={props.state}
-			/>
+			<LogoMark />
 			<span className="brand-wordmark" aria-hidden="true">
 				Snacode
 			</span>
@@ -1600,13 +1594,8 @@ export function ProjectAvatar(props: { name: string; kind?: "chat" | "project" }
 export function AgentAvatar(props: { status: string }) {
 	return (
 		<div className={`conversation-avatar agent-avatar ${props.status}`}>
-			<svg viewBox="140 140 520 520" width="28" height="28" aria-hidden="true">
-				<path
-					fill="#fff"
-					fillRule="evenodd"
-					d="M165.29 165.29H517.36V400H400V517.36H282.65V634.72H165.29ZM282.65 282.65V400H400V282.65Z"
-				/>
-				<path fill="#fff" d="M517.36 400H634.72V634.72H517.36Z" />
+			<svg viewBox="0 0 512 512" width="28" height="28" aria-hidden="true">
+				<path fill="#fff" d={SNACODE_LOGO_PATH} />
 			</svg>
 		</div>
 	);
@@ -1616,18 +1605,8 @@ export function EmptyState(props: { hasProject: boolean; onCreate: () => void })
 	return (
 		<div className="empty-state">
 			<div className="empty-logo">
-				<svg
-					viewBox="140 140 520 520"
-					width="66"
-					height="66"
-					aria-hidden="true"
-				>
-					<path
-						fill="#fff"
-						fillRule="evenodd"
-						d="M165.29 165.29H517.36V400H400V517.36H282.65V634.72H165.29ZM282.65 282.65V400H400V282.65Z"
-					/>
-					<path fill="#fff" d="M517.36 400H634.72V634.72H517.36Z" />
+				<svg viewBox="0 0 512 512" width="66" height="66" aria-hidden="true">
+					<path fill="#fff" d={SNACODE_LOGO_PATH} />
 				</svg>
 			</div>
 			<div className="empty-tagline" aria-label={`${t("app.emptyTaglineLine1")} ${t("app.emptyTaglineLine2Prefix")}${t("app.emptyTaglineYours")}`}>
@@ -1793,11 +1772,11 @@ function toolIcon(toolName: string): ReactNode {
 
 
 /** 从工具消息 meta 中提取副标题（文件路径或命令），让 trigger 行能体现工具作用对象。
- *  pi 的工具参数可能是对象，也可能已被主进程截断/序列化为 JSON 字符串；两种格式都要兼容，否则 bash 命令摘要会丢失。 */
+ *  sd 的工具参数可能是对象，也可能已被主进程截断/序列化为 JSON 字符串；两种格式都要兼容，否则 bash 命令摘要会丢失。 */
 function getToolSubtitle(message: ChatMessage): string {
 	const meta = message.meta;
 	if (!meta) return "";
-	// 优先从 args 取参数（pi 工具事件的标准结构）
+	// 优先从 args 取参数（sd 工具事件的标准结构）
 	const args = parseToolArgs(meta.args);
 	if (args) {
 		for (const key of [
@@ -1865,7 +1844,7 @@ function getToolDiffTarget(message: ChatMessage): { path: string; originalConten
 }
 
 /**
- * 识别模型主动触发的 skill：pi 系统提示会指示 LLM 用 read 工具读取 SKILL.md 来加载 skill，
+ * 识别模型主动触发的 skill：sd 系统提示会指示 LLM 用 read 工具读取 SKILL.md 来加载 skill，
  * 所以 toolName==="read" 且 path 以 SKILL.md 结尾时，视为 skill 调用，返回 skill 名（父目录名）。
  * 这是模型侧的 skill 触发，与用户侧 /skill:name 展开成 <skill> 块不同。
  */
@@ -1895,7 +1874,7 @@ function getToolTone(message: ChatMessage): "running" | "error" | "warning" | "o
 	return "ok";
 }
 
-/** pi 内置工具名集合，用于与 MCP / 扩展工具区分。 */
+/** sd 内置工具名集合，用于与 MCP / 扩展工具区分。 */
 const BUILT_IN_TOOLS = new Set(["bash", "edit", "find", "grep", "ls", "read", "write"]);
 
 /**
@@ -1906,9 +1885,9 @@ const NON_MCP_TOOLS = new Set(["ask_question"]);
 
 /**
  * 识别工具来源类型：
- * - mcp-proxy：toolName 为 mcp（pi-mcp-adapter 代理模式，LLM 通过单一 mcp 工具调用具体 server/tool）
+ * - mcp-proxy：toolName 为 mcp（sd-mcp-adapter 代理模式，LLM 通过单一 mcp 工具调用具体 server/tool）
  * - mcp-direct：toolName 形如 {server}_{tool} 且非内置/非扩展工具（directTools 模式，server 名去掉 -mcp 后缀）
- * - builtin：pi 内置工具（bash/edit/find/grep/ls/read/write）
+ * - builtin：sd 内置工具（bash/edit/find/grep/ls/read/write）
  * - extension：扩展工具或自定义命名的其他工具
  */
 function getToolKind(toolName: string): "mcp-proxy" | "mcp-direct" | "builtin" | "extension" {
@@ -2314,7 +2293,7 @@ export const AskQuestionCard = memo(function AskQuestionCard(props: {
 			<div className="ask-question-card-body">
 				{method === "select" && options && options.length > 0 && (
 					<div className="ask-question-card-options">
-						{/* 过滤掉 Pi 自带的 "✎ 自行输入..." 选项，用下方内联输入框替代 */}
+						{/* 过滤掉 sd 自带的 "✎ 自行输入..." 选项，用下方内联输入框替代 */}
 						{options.filter((opt) => !opt.startsWith("✎")).map((opt, i) => (
 							<button
 								key={i}
@@ -2896,7 +2875,7 @@ export const TurnRow = memo(function TurnRow(props: {
 			<article ref={rowRef} className="turn-row" data-message-id={run.id}>
 				<div className="turn-row-body">
 					<div className="turn-row-meta">
-						<span className="turn-row-agent">pi</span>
+						<span className="turn-row-agent">sd</span>
 						<time>{formatTime(run.endedAt)}</time>
 					</div>
 					{/* 按时间顺序渲染所有条目，最新的活动在底部 */}
@@ -2914,7 +2893,7 @@ export const TurnRow = memo(function TurnRow(props: {
 			<article ref={rowRef} className="turn-row" data-message-id={run.id}>
 				<div className="turn-row-body">
 					<div className="turn-row-meta">
-						<span className="turn-row-agent">pi</span>
+						<span className="turn-row-agent">sd</span>
 						<time>{formatTime(run.endedAt)}</time>
 						{showDuration && (
 							<span className="turn-row-duration">{formatDuration(duration)}</span>
@@ -2962,7 +2941,7 @@ export const TurnRow = memo(function TurnRow(props: {
 		<article ref={rowRef} className="turn-row" data-message-id={run.id}>
 			<div className="turn-row-body">
 				<div className="turn-row-meta">
-					<span className="turn-row-agent">pi</span>
+					<span className="turn-row-agent">sd</span>
 					<time>{formatTime(run.endedAt)}</time>
 					{showDuration && (
 						<span className="turn-row-duration">{formatDuration(duration)}</span>
@@ -3097,14 +3076,14 @@ export const TurnRow = memo(function TurnRow(props: {
 );
 
 /**
- * 从用户消息文本中提取 pi 展开后的 <skill name="..." location="...">...</skill> 块。
- * pi 在发送 /skill:name 时会把 skill 内容展开成该 XML 块注入用户消息，
+ * 从用户消息文本中提取 sd 展开后的 <skill name="..." location="...">...</skill> 块。
+ * sd 在发送 /skill:name 时会把 skill 内容展开成该 XML 块注入用户消息，
  * 这里在展示层把它们识别出来，渲染成 skill 徽标，并把原始 XML 从正文里剥除。
  * 返回 { skills, text }：skills 为 skill 名列表，text 为移除 skill 块后的正文。
  */
 function extractSkillBlocks(text: string): { skills: string[]; text: string } {
 	const skills: string[] = [];
-	// 非贪婪匹配 skill 块；name/location 属性顺序与引号样式兼容 pi 实际输出
+	// 非贪婪匹配 skill 块；name/location 属性顺序与引号样式兼容 sd 实际输出
 	const re = /<skill\s+name="([^"]+)"[^>]*>[\s\S]*?<\/skill>/gi;
 	const cleaned = text.replace(re, (_m, name: string) => {
 		if (name) skills.push(name);
@@ -3142,7 +3121,7 @@ export const UserBubble = memo(function UserBubble(props: {
 			editAreaRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
 		}
 	}, [editing]);
-	// 提取 pi 展开后的 <skill> 块：渲染为 skill 徽标，并从正文里剥除 XML
+	// 提取 sd 展开后的 <skill> 块：渲染为 skill 徽标，并从正文里剥除 XML
 	const { skills, text: bodyText } = extractSkillBlocks(stripAnsi(message.text));
 	const cleanText = bodyText;
 	// 投递策略标签：steer(下次调用前插入) / followUp(停止后排队)
@@ -3423,7 +3402,7 @@ export function ImagePreviewModal(props: {
 // ANSI 转义码正则:匹配 \x1b[...m 等终端颜色/样式序列
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
 
-/** 去除 pi 输出中的 ANSI 终端转义码,避免在 React UI 中显示原始 \e[38;5;109m 等文本 */
+/** 去除 sd 输出中的 ANSI 终端转义码,避免在 React UI 中显示原始 \e[38;5;109m 等文本 */
 function stripAnsi(text: string): string {
 	return text.replace(ANSI_RE, "");
 }
@@ -3561,7 +3540,7 @@ function MermaidDiagram(props: { chart: string }) {
 	useEffect(() => {
 		let disposed = false;
 		const chart = normalizeMermaidChart(props.chart);
-		const renderId = `pi-mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+		const renderId = `sd-mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 		// Mermaid 图由模型输出生成，使用 strict 安全级别并禁用 startOnLoad，
 		// 避免库扫描整个页面或执行不受控的链接/脚本行为。此处动态加载 mermaid，
 		// 保证不按需出现的图表场景不占用渲染进程常驻内存。
@@ -3903,7 +3882,7 @@ export function MultiSelectModal(props: {
 									>
 										<Brain size={15} className="multi-select-node-icon assistant" />
 										<span className="multi-select-node-label">
-											<span className="multi-select-node-run-label">pi</span>
+											<span className="multi-select-node-run-label">sd</span>
 											<span className="multi-select-node-time">
 												{formatTime(item.endedAt)}
 											</span>
@@ -4352,7 +4331,7 @@ export function ConversationOutline(props: {
 	);
 }
 
-const OUTLINE_TOP_STORAGE_KEY = "pi-desktop:outline-top";
+const OUTLINE_TOP_STORAGE_KEY = "sd-desktop:outline-top";
 function getInitialOutlineTop() {
 	if (typeof window === "undefined") return 180;
 	const saved = Number(localStorage.getItem(OUTLINE_TOP_STORAGE_KEY));
@@ -5038,7 +5017,7 @@ function SessionsPanel(props: {
 							>
 								<div className="session-card-title">
 									<strong>{session.name || t("common.untitled")}</strong>
-									{session.source && session.source !== "pi" && (
+									{session.source && session.source !== "sd" && (
 										<span className={`session-source-badge ${session.source}`}>
 											{t(`sessionSource.${session.source}` as any)}
 										</span>
@@ -5497,14 +5476,14 @@ export function SessionManagerModal(props: {
 	onExport: (session: SessionSummary) => void;
 	onDelete: (sessions: SessionSummary[]) => void;
 }) {
-	const SOURCES = ["pi", "codex", "claude", "opencode"] as const;
+	const SOURCES = ["sd", "codex", "claude", "opencode"] as const;
 	const [activeSources, setActiveSources] = useState<Set<string>>(new Set(SOURCES));
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [selectAll, setSelectAll] = useState(false);
 
 	// 按来源过滤
 	const filteredSessions = props.sessions.filter((s) =>
-		activeSources.has(s.source ?? "pi"),
+		activeSources.has(s.source ?? "sd"),
 	);
 
 	const toggleSource = (source: string) => {
@@ -5621,7 +5600,7 @@ export function SessionManagerModal(props: {
 									<div className="session-manager-row-name">
 										{session.name || session.preview?.slice(0, 60) || t("common.untitled")}
 									</div>
-									{session.source && session.source !== "pi" && (
+									{session.source && session.source !== "sd" && (
 										<span className={`session-source-badge ${session.source}`}>
 											{t(`sessionSource.${session.source}` as any)}
 										</span>
@@ -5854,28 +5833,28 @@ export function SessionContextMenu(props: {
 export function SettingsModal(props: {
 	settings: AppSettings;
 	notice: string;
-	piStatus: AgentInstallStatus | null;
-	piChecking: boolean;
+	sdStatus: AgentInstallStatus | null;
+	sdChecking: boolean;
 	piProxyChecking: boolean;
 	piProxyNotice: string;
 	piProxyNoticeTone: "info" | "success" | "error";
 	webServiceChanging: boolean;
 	appInfo: AppInfo;
-	customPiPath: string;
+	customSdPath: string;
 	customPathValidating: boolean;
 	customPathResult: AgentInstallStatus | null;
 	updateChecking: boolean;
 	piUpdating: boolean;
-	piUpdateChecking: boolean;
-	piUpdateCheck: UpdateCheckResult | null;
-	piUpdateResult: CliUpdateResult | null;
+	sdUpdateChecking: boolean;
+	sdUpdateCheck: UpdateCheckResult | null;
+	sdUpdateResult: CliUpdateResult | null;
 	onCustomPathChange: (path: string) => void;
 	onValidateCustomPath: () => void;
 	onClearCustomPath: () => void;
-	onCheckPi: () => void;
+	onCheckSd: () => void;
 	onTestPiProxy: () => void;
 	onCheckUpdate: () => void;
-	onCheckPiUpdate: () => void;
+	onCheckSdUpdate: () => void;
 	onUpdatePi: () => void;
 	onToggleDevTools: () => void;
 	onRestartApp: () => void;
@@ -5885,7 +5864,7 @@ export function SettingsModal(props: {
 }) {
 	const [activeTab, setActiveTab] = useState<SettingsTabId>("common");
 	const [webPortDraft, setWebPortDraft] = useState(String(props.settings.webServicePort));
-	const piPath = props.settings.customPiPath || props.piStatus?.command || "";
+	const sdPath = props.settings.customSdPath || props.sdStatus?.command || "";
 	useEffect(() => {
 		setWebPortDraft(String(props.settings.webServicePort));
 	}, [props.settings.webServicePort]);
@@ -5895,7 +5874,7 @@ export function SettingsModal(props: {
 	// 完整宠物清单（含 spritesheetUrl / 描述），用于选择预览：仅靠 id 无法加载图，需清单里的 url。
 	const [petList, setPetList] = useState<PetManifest[]>([]);
 	useEffect(() => {
-		window.piDesktop.pet
+		window.snacodeDesktop.pet
 			.list()
 			.then((pets) => { setPetList(pets); setPetOptions(pets.map((p) => ({ value: p.id, label: p.displayName }))); })
 			.catch(() => undefined);
@@ -6146,30 +6125,30 @@ export function SettingsModal(props: {
 									<SettingSwitch
 										title={t("settings.enablePiProxy")}
 										description={t("settings.settingTakesEffectAfterRestart")}
-										checked={props.settings.piProxyEnabled}
+										checked={props.settings.sdProxyEnabled}
 										onChange={(checked) =>
-											props.onChange({ piProxyEnabled: checked })
+											props.onChange({ sdProxyEnabled: checked })
 										}
 									/>
-									{props.settings.piProxyEnabled && (
+									{props.settings.sdProxyEnabled && (
 										<div className="setting-proxy-panel">
 											<TextField
 												className="setting-field"
 												label={t("settings.proxyUrl")}
-												value={props.settings.piProxyUrl}
+												value={props.settings.sdProxyUrl}
 												placeholder="http://127.0.0.1:7890"
 												onChange={(value) =>
-													props.onChange({ piProxyUrl: value })
+													props.onChange({ sdProxyUrl: value })
 												}
 											/>
 											<TextField
 												className="setting-field"
 												label={t("settings.proxyBypass")}
-												value={props.settings.piProxyBypass}
+												value={props.settings.sdProxyBypass}
 												placeholder="localhost,127.0.0.1,::1"
 												description={t("settings.noProxyHint")}
 												onChange={(value) =>
-													props.onChange({ piProxyBypass: value })
+													props.onChange({ sdProxyBypass: value })
 												}
 											/>
 											<div className="setting-row">
@@ -6304,48 +6283,48 @@ export function SettingsModal(props: {
 										<div>
 											<strong>{t("settings.piEnvironment")}</strong>
 											<small>
-												{props.piStatus
-													? props.piStatus.installed
+												{props.sdStatus
+													? props.sdStatus.installed
 														? t("settings.foundPi", {
-																version: props.piStatus.version ?? "pi",
+																version: props.sdStatus.version ?? "sd",
 															})
-														: t("settings.piMissing")
+														: t("settings.sdMissing")
 													: t("settings.piCliAvailable")}
 											</small>
-											{piPath && (
+											{sdPath && (
 												<small className="setting-path">
-													{t("settings.currentPath", { path: piPath })}
+													{t("settings.currentPath", { path: sdPath })}
 												</small>
 											)}
-											{props.piStatus && !props.piStatus.installed && props.piStatus.error && (
+											{props.sdStatus && !props.sdStatus.installed && props.sdStatus.error && (
 												<small className="setting-status error setting-error-detail">
 													{t("settings.detectFailed", {
-														error: props.piStatus.error,
+														error: props.sdStatus.error,
 													})}
 												</small>
 											)}
 										</div>
-										<Button onClick={props.onCheckPi} disabled={props.piChecking}>
-											{props.piChecking ? t("settings.detecting") : t("settings.detectEnvironment")}
+										<Button onClick={props.onCheckSd} disabled={props.sdChecking}>
+											{props.sdChecking ? t("settings.detecting") : t("settings.detectEnvironment")}
 										</Button>
 									</div>
-									<div className="setting-pi-path-panel">
+									<div className="setting-sd-path-panel">
 										<TextField
 											className="setting-field"
-											label={t("settings.customPiPath")}
-											value={props.customPiPath}
+											label={t("settings.customSdPath")}
+											value={props.customSdPath}
 											placeholder={
-												piPath ||
-												"D:\\mise-data\\installs\\node\\24 13 0\\pi.cmd"
+												sdPath ||
+												"C:\\Users\\YourName\\AppData\\Roaming\\npm\\sd.cmd"
 											}
-											description={t("settings.customPiPathHint")}
+											description={t("settings.customSdPathHint")}
 											disabled={props.customPathValidating}
 											onChange={props.onCustomPathChange}
 										/>
-										<div className="setting-pi-path-actions">
+										<div className="setting-sd-path-actions">
 											<Button
 												onClick={props.onValidateCustomPath}
-												disabled={!props.customPiPath.trim() || props.customPathValidating}
+												disabled={!props.customSdPath.trim() || props.customPathValidating}
 											>
 												{props.customPathValidating
 													? t("settings.validating")
@@ -6353,7 +6332,7 @@ export function SettingsModal(props: {
 											</Button>
 											<Button
 												onClick={props.onClearCustomPath}
-												disabled={!props.settings.customPiPath || props.customPathValidating}
+												disabled={!props.settings.customSdPath || props.customPathValidating}
 											>
 												{t("settings.clearCustomPiPath")}
 											</Button>
@@ -6365,7 +6344,7 @@ export function SettingsModal(props: {
 															value:
 																props.customPathResult.command ??
 																props.customPathResult.version ??
-																"pi",
+																"sd",
 														})
 													: t("settings.validateFailed", {
 															error:
@@ -6400,28 +6379,28 @@ export function SettingsModal(props: {
 									</div>
 									<div className="setting-row">
 										<div>
-											<strong>{t("settings.piUpdate")}</strong>
-											<small>{t("settings.piUpdateDesc")}</small>
+											<strong>{t("settings.sdUpdate")}</strong>
+											<small>{t("settings.sdUpdateDesc")}</small>
 											<small className="setting-status info">
-												{t("settings.piUpdateVersions", {
-													current: props.piUpdateCheck?.currentVersion ?? props.piStatus?.version ?? "-",
-													latest: props.piUpdateCheck?.latestVersion ?? "-",
+												{t("settings.sdUpdateVersions", {
+													current: props.sdUpdateCheck?.currentVersion ?? props.sdStatus?.version ?? "-",
+													latest: props.sdUpdateCheck?.latestVersion ?? "-",
 												})}
 											</small>
 										</div>
 										<div className="setting-inline-actions">
-											<Button onClick={props.onCheckPiUpdate} loading={props.piUpdateChecking} disabled={props.settings.disableUpdateCheck}>
+											<Button onClick={props.onCheckSdUpdate} loading={props.sdUpdateChecking} disabled={props.settings.disableUpdateCheck}>
 												{props.settings.disableUpdateCheck
 													? t("settings.updateCheckDisabled")
-													: t("settings.checkPiUpdate")}
+													: t("settings.checkSdUpdate")}
 											</Button>
-											<Button onClick={props.onUpdatePi} loading={props.piUpdating} disabled={props.settings.disableUpdateCheck || !props.piUpdateCheck?.hasUpdate}>
+											<Button onClick={props.onUpdatePi} loading={props.piUpdating} disabled={props.settings.disableUpdateCheck || !props.sdUpdateCheck?.hasUpdate}>
 												{t("settings.updatePi")}
 											</Button>
 										</div>
 									</div>
-									{props.piUpdateResult && (
-										<pre className="setting-update-output">{props.piUpdateResult.command}\n{props.piUpdateResult.output}</pre>
+									{props.sdUpdateResult && (
+										<pre className="setting-update-output">{props.sdUpdateResult.command}\n{props.sdUpdateResult.output}</pre>
 									)}
 								</SettingsSection>
 								<SettingsSection title={t("settings.debug")}>
@@ -6559,19 +6538,19 @@ export function SettingsModal(props: {
 											{ value: "jumping", label: "🤸 jumping (行4)" },
 											{ value: "review", label: "🔍 review (行8)" },
 										]}
-										onChange={(value) => { setPetPreviewMode(value); void window.piDesktop.pet.setPreviewMode(value === "__auto" ? "" : value); }}
+										onChange={(value) => { setPetPreviewMode(value); void window.snacodeDesktop.pet.setPreviewMode(value === "__auto" ? "" : value); }}
 									/>
 									<div className="setting-inline-actions pet-test-actions">
 										<Button
 											buttonSize="sm"
 											variant="danger"
-											onClick={() => void window.piDesktop.pet.testNotify("error")}
+											onClick={() => void window.snacodeDesktop.pet.testNotify("error")}
 										>
 											{t("settings.pet.testError")}
 										</Button>
 										<Button
 											buttonSize="sm"
-											onClick={() => void window.piDesktop.pet.testNotify("done")}
+											onClick={() => void window.snacodeDesktop.pet.testNotify("done")}
 										>
 											{t("settings.pet.testDone")}
 										</Button>

@@ -5,8 +5,8 @@
  * - CardKit 2.0 流式卡片：骨架卡→实时更新→终态 flush
  *   看到工具调用名称、思考过程、输出文本等细节
  * - 智能消息模式：text/post/interactive 解决表格渲染
- * - Session Mirror：Pi 创建会话→飞书自动拉群（1会话=1群）
- * - Pi→飞书实时同步：AgentManager 事件驱动
+ * - Session Mirror：Sd 创建会话→飞书自动拉群（1会话=1群）
+ * - Sd→飞书实时同步：AgentManager 事件驱动
  */
 
 import type { BrowserWindow } from "electron";
@@ -571,7 +571,7 @@ export class FeishuBridge {
 		const { writeFileSync, mkdirSync } = await import("node:fs");
 		const { join } = await import("node:path");
 		const { tmpdir } = await import("node:os");
-		const imgDir = join(tmpdir(), "pi-feishu-images");
+		const imgDir = join(tmpdir(), "sd-feishu-images");
 		mkdirSync(imgDir, { recursive: true });
 		const savedImages: string[] = [];
 		const images: ImageContent[] = imageAttachments.map((att) => {
@@ -763,7 +763,7 @@ export class FeishuBridge {
 							// 卡片交付失败时再补一条纯文本，保证用户仍能看到结果。
 							const chatIdForFallback = this.getBestChatId(agentId);
 							if (chatIdForFallback && this.client) {
-								void this.syncPiMessageToFeishu(agentId, chatIdForFallback).catch((e) =>
+								void this.syncSdMessageToFeishu(agentId, chatIdForFallback).catch((e) =>
 									logErr("[Feishu Bridge] card-fallback sync failed:", e),
 								);
 							}
@@ -774,7 +774,7 @@ export class FeishuBridge {
 						logErr("[飞书 Bridge] 终态卡片 flush/close 异常:", e);
 						const chatIdForFallback = this.getBestChatId(agentId);
 						if (chatIdForFallback && this.client) {
-							void this.syncPiMessageToFeishu(agentId, chatIdForFallback).catch((err) =>
+							void this.syncSdMessageToFeishu(agentId, chatIdForFallback).catch((err) =>
 								logErr("[Feishu Bridge] card-fallback sync failed:", err),
 							);
 						}
@@ -807,17 +807,17 @@ export class FeishuBridge {
 				// 卡片路径自己负责终态；flush 失败时会主动 fallback 补发。
 				return;
 			}
-			log(`[Feishu Bridge] agent_end 触发 syncPiMessageToFeishu, agentId=${agentId.slice(0,8)}`);
+			log(`[Feishu Bridge] agent_end 触发 syncSdMessageToFeishu, agentId=${agentId.slice(0,8)}`);
 			const chatId = this.getBestChatId(agentId);
 			if (chatId && this.client) {
-				this.syncPiMessageToFeishu(agentId, chatId).catch((e) =>
-					logErr("[Feishu Bridge] sync Pi message failed:", e));
+				this.syncSdMessageToFeishu(agentId, chatId).catch((e) =>
+					logErr("[Feishu Bridge] sync Sd message failed:", e));
 			}
 		}
 	}
 
-	/** 将 Pi Agent 回复同步到飞书（带去重，避免同一结果重复推送） */
-	private async syncPiMessageToFeishu(agentId: string, chatId: string): Promise<void> {
+	/** 将 Sd Agent 回复同步到飞书（带去重，避免同一结果重复推送） */
+	private async syncSdMessageToFeishu(agentId: string, chatId: string): Promise<void> {
 		if (!this.client) return;
 		const messages = this.agentManager.getMessages(agentId);
 		const assistantMessages = messages.filter((m) => m.role === "assistant");
@@ -866,7 +866,7 @@ export class FeishuBridge {
 		return this.sendFeishuFile(chatId, filePath);
 	}
 
-	/** 将 Snacode 中的用户消息转发到飞书群（双向同步：Pi → 飞书） */
+	/** 将 Snacode 中的用户消息转发到飞书群（双向同步：Sd → 飞书） */
 	async forwardUserMessageToFeishu(agentId: string, text: string): Promise<void> {
 		if (!this.client || !text.trim()) return;
 		const chatId = this.getBestChatId(agentId);
@@ -981,7 +981,7 @@ export class FeishuBridge {
 		}
 	}
 
-	/** Session Mirror: Pi 侧创建会话时自动拉群（1会话=1群） */
+	/** Session Mirror: Sd 侧创建会话时自动拉群（1会话=1群） */
 	async ensureSessionMirror(sessionId: string, sessionTitle?: string, sessionPath?: string): Promise<string | undefined> {
 		const pending = this.sessionMirrorPending.get(sessionId);
 		if (pending) return pending;
@@ -998,7 +998,7 @@ export class FeishuBridge {
 			return undefined;
 		}
 
-		const groupName = `Pi Agent - ${(sessionTitle || `新会话 ${sessionId.slice(0, 8)}`).slice(0, 50)}`;
+		const groupName = `Sd Agent - ${(sessionTitle || `新会话 ${sessionId.slice(0, 8)}`).slice(0, 50)}`;
 
 		// 1. 按 sessionId 找已有绑定（只认 session-mirror 类型，忽略私聊等）
 		let existingChatId = this.sessionToChat.get(sessionId);
@@ -1019,7 +1019,7 @@ export class FeishuBridge {
 					// 更新 sessionId 映射
 					binding.sessionId = sessionId;
 					this.sessionToChat.set(sessionId, cid);
-					// 不加入 feishuSessions：session-mirror 需要 syncPiMessageToFeishu 发送结果文本
+					// 不加入 feishuSessions：session-mirror 需要 syncSdMessageToFeishu 发送结果文本
 					this.persistBindings();
 					break;
 				}
@@ -1144,7 +1144,7 @@ export class FeishuBridge {
 			// 按 agent UUID 兜底键保存，确保 sessionPath 不存在时也能找到
 			setPersistentChatId(`agent:${sessionId}`, chatId);
 
-			await this.sendSmartMessage(chatId, `🤖 Pi Agent 会话已创建\n会话 ID: ${sessionId.slice(0, 8)}\n\n直接发消息即可与 Agent 对话。`);
+			await this.sendSmartMessage(chatId, `🤖 Sd Agent 会话已创建\n会话 ID: ${sessionId.slice(0, 8)}\n\n直接发消息即可与 Agent 对话。`);
 			return chatId;
 		} catch (e) {
 			const errMsg = e instanceof Error ? e.message : String(e);
@@ -1172,7 +1172,7 @@ export class FeishuBridge {
 		}
 	}
 
-	/** Session Mirror: Agent 运行前为 Pi 侧会话打开流式卡片 */
+	/** Session Mirror: Agent 运行前为 Sd 侧会话打开流式卡片 */
 	async startSessionMirrorRun(sessionId: string, sessionTitle?: string, sessionPath?: string): Promise<void> {
 		if (!this.client || this.status.status !== "connected") return;
 
@@ -1317,7 +1317,7 @@ export class FeishuBridge {
 	private async sendHelpCard(chatId: string): Promise<void> {
 		await this.sendCardMessage(chatId, {
 			config: { wide_screen_mode: true, update_multi: true },
-			header: { title: { tag: "plain_text", content: "🤖 Pi Agent 帮助" }, template: "green" },
+			header: { title: { tag: "plain_text", content: "🤖 Sd Agent 帮助" }, template: "green" },
 			elements: [{ tag: "markdown", content: ["**可用命令**", "", "`/new` 或 `/n` — 创建新会话", "`/stop` 或 `/s` — 停止当前 Agent", "`/model` — 打开模型切换按钮卡片", "`/status` — 查看当前状态", "`/whoami` — 查看你的 open_id", "`/help` 或 `/h` — 查看帮助", "", "**Agent 自主能力**", "让 Agent 帮你导出文件或写报告时，它会自动：", "• 发送文件到飞书聊天", "• 创建飞书文档并分享链接", ""].join("\n") }],
 		});
 	}
@@ -1384,7 +1384,7 @@ export class FeishuBridge {
 		}
 		const docMatch = text.match(/\[CREATE_DOC:([^\]]+)\]/);
 		if (docMatch) {
-			const title = docMatch[1].trim() || "Pi Agent 文档";
+			const title = docMatch[1].trim() || "Sd Agent 文档";
 			const result = await this.createFeishuDoc(chatId, title, text);
 			// createFeishuDoc 内部失败时发了消息，这里补充发送
 			if (result.startsWith("❌") || result.startsWith("创建")) await this.sendSmartMessage(chatId, result);
@@ -1560,8 +1560,8 @@ export class FeishuBridge {
 				};
 				this.chatBindings.set(b.chatId, binding);
 				this.sessionToChat.set(tab.id, b.chatId);
-				// 只对 Feishu 发起的会话加入 feishuSessions（阻止 syncPiMessageToFeishu 重复发送）；
-				// session-mirror 需要靠 syncPiMessageToFeishu 发送最终结果文本，不加入。
+				// 只对 Feishu 发起的会话加入 feishuSessions（阻止 syncSdMessageToFeishu 重复发送）；
+				// session-mirror 需要靠 syncSdMessageToFeishu 发送最终结果文本，不加入。
 				if (b.source === "feishu") this.feishuSessions.add(tab.id);
 				// 同步持久化 chatId 映射，确保断开重连后能复用群组
 				if (tab.sessionPath) {

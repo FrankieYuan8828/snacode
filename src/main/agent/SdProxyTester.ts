@@ -3,32 +3,32 @@ import tls from "node:tls";
 import { Buffer } from "node:buffer";
 import type { AppSettings, ProxyTestResult } from "../../shared/types";
 
-type PiProxySettings = Pick<
+type SdProxySettings = Pick<
 	AppSettings,
-	"piProxyEnabled" | "piProxyUrl" | "piProxyBypass"
+	"sdProxyEnabled" | "sdProxyUrl" | "sdProxyBypass"
 >;
 
 const DEFAULT_PROXY_TEST_URL = "https://api.openai.com/v1/models";
 const PROXY_TEST_TIMEOUT_MS = 8_000;
 
-export async function testPiProxy(
-	settings: PiProxySettings,
+export async function testSdProxy(
+	settings: SdProxySettings,
 	testUrl = DEFAULT_PROXY_TEST_URL,
 ): Promise<ProxyTestResult> {
 	const startedAt = Date.now();
 
 	try {
 		const target = new URL(testUrl);
-		if (!settings.piProxyEnabled) {
-			return failure("请先启用 pi agent 代理。", startedAt, testUrl);
+		if (!settings.sdProxyEnabled) {
+			return failure("请先启用 SD agent 代理。", startedAt, testUrl);
 		}
 
-		const proxyValue = settings.piProxyUrl.trim();
+		const proxyValue = settings.sdProxyUrl.trim();
 		if (!proxyValue) {
 			return failure("代理地址为空。", startedAt, testUrl);
 		}
 
-		if (matchesNoProxy(target.hostname, getUrlPort(target), settings.piProxyBypass)) {
+		if (matchesNoProxy(target.hostname, getUrlPort(target), settings.sdProxyBypass)) {
 			return {
 				...failure("检测目标命中绕过代理列表，本次不会经过代理。", startedAt, testUrl),
 				bypassed: true,

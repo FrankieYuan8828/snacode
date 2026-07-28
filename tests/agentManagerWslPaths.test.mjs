@@ -27,7 +27,7 @@ function loadAgentManager() {
 	const wslPaths = loadWslPaths();
 	const sessionEntryIds = (() => {
 		const sandbox = { exports: {}, require };
-		vm.runInNewContext(transpile("src/main/pi/sessionEntryIds.ts"), sandbox, {
+		vm.runInNewContext(transpile("src/main/agent/sessionEntryIds.ts"), sandbox, {
 			filename: "sessionEntryIds.ts",
 		});
 		return sandbox.exports;
@@ -89,7 +89,7 @@ function loadAgentManager() {
 			if (id === "node:path") return path.win32;
 			if (id === "node:os") return { homedir: () => "C:\\Users\\tester" };
 			if (id === "../../shared/ipc") return { ipcChannels: {} };
-			if (id === "./PiProcess") return { PiProcess: class {} };
+			if (id === "./SdProcess") return { SdProcess: class {} };
 			if (id === "./bashResult") return { formatBashToolMessage: () => ({}) };
 			if (id === "./messageContent") return { extractMessageText: (value) => String(value ?? "") };
 			if (id === "./historyMessages") return { mergeHistoryWithPreservedMessages: (value) => value };
@@ -100,7 +100,7 @@ function loadAgentManager() {
 			return require(id);
 		},
 	};
-	vm.runInNewContext(transpile("src/main/pi/AgentManager.ts"), sandbox, { filename: "AgentManager.ts" });
+	vm.runInNewContext(transpile("src/main/agent/AgentManager.ts"), sandbox, { filename: "AgentManager.ts" });
 	return { ...sandbox.exports, calls, wslPaths };
 }
 
@@ -117,15 +117,15 @@ test("maps WSL session file operations to host paths while deduping by Linux ide
 	const { AgentManager, calls, wslPaths } = loadAgentManager();
 	const manager = createManager(AgentManager);
 	manager.configureWsl(wslPaths.createWslEnvironment("Ubuntu-24.04", "root", "/root"));
-	const sessionPath = "/root/.pi/agent/sessions/session.jsonl";
+	const sessionPath = "/root/.sd/agent/sessions/session.jsonl";
 
 	assert.equal(
-		manager.normalizeSessionPathForCompare("//wsl$/Ubuntu-24.04/root/.pi/agent/sessions/session.jsonl"),
+		manager.normalizeSessionPathForCompare("//wsl$/Ubuntu-24.04/root/.sd/agent/sessions/session.jsonl"),
 		sessionPath,
 	);
 	assert.notEqual(
-		manager.normalizeSessionPathForCompare("/root/.pi/agent/sessions/Session.jsonl"),
-		manager.normalizeSessionPathForCompare("/root/.pi/agent/sessions/session.jsonl"),
+		manager.normalizeSessionPathForCompare("/root/.sd/agent/sessions/Session.jsonl"),
+		manager.normalizeSessionPathForCompare("/root/.sd/agent/sessions/session.jsonl"),
 	);
 	assert.equal(
 		manager.normalizeSessionPathForCompare("/mnt/c/Users/Test/Session.jsonl"),
@@ -154,7 +154,7 @@ test("maps WSL session file operations to host paths while deduping by Linux ide
 	manager.reloadSession = async () => {};
 	await manager.prepareResendFromMessage("agent", "message");
 
-	const expectedHostPath = "\\\\wsl.localhost\\Ubuntu-24.04\\root\\.pi\\agent\\sessions\\session.jsonl";
+	const expectedHostPath = "\\\\wsl.localhost\\Ubuntu-24.04\\root\\.sd\\agent\\sessions\\session.jsonl";
 	assert.equal(calls.statSync[0], expectedHostPath);
 	assert.equal(calls.readFile[0][0], expectedHostPath);
 	assert.equal(calls.copyFile[0][0], expectedHostPath);
@@ -178,10 +178,10 @@ test("keeps switch_session RPC paths in Linux form", async () => {
 
 	await manager.switchSession(
 		"agent",
-		"\\\\wsl.localhost\\Ubuntu-24.04\\root\\.pi\\agent\\sessions\\session.jsonl",
+		"\\\\wsl.localhost\\Ubuntu-24.04\\root\\.sd\\agent\\sessions\\session.jsonl",
 	);
 
-	assert.equal(requests[0].sessionPath, "/root/.pi/agent/sessions/session.jsonl");
+	assert.equal(requests[0].sessionPath, "/root/.sd/agent/sessions/session.jsonl");
 });
 
 test("uses host paths for trust resource checks and Linux paths for trust keys", async () => {

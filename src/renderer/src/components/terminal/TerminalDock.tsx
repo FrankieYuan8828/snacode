@@ -1,4 +1,4 @@
-import {
+﻿import {
 	useEffect,
 	useRef,
 	useState,
@@ -15,7 +15,7 @@ import type { TerminalTab } from "../../../../shared/types";
 import { t } from "../../i18n";
 
 const TERMINAL_THEMES = {
-	"pi-soft": {
+	"sd-soft": {
 		label: "Snacode Soft",
 		xterm: {
 			background: "#ffffff",
@@ -101,7 +101,7 @@ export function TerminalDock(props: {
 	/* copyNotice 已改用 toast (sonner) 实现 */
 	const [tabs, setTabs] = useState<TerminalTab[]>([]);
 	const [activeTabId, setActiveTabId] = useState("");
-	const [themeId, setThemeId] = useState<TerminalThemeId>("pi-soft");
+	const [themeId, setThemeId] = useState<TerminalThemeId>("sd-soft");
 	const [themeMenuOpen, setThemeMenuOpen] = useState(false);
 	const [confirmCloseAllOpen, setConfirmCloseAllOpen] = useState(false);
 	/* copyNotice 已改用 toast (sonner) 实现 */
@@ -119,7 +119,7 @@ export function TerminalDock(props: {
 	const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
 	const theme = TERMINAL_THEMES[themeId];
 	const xtermTheme =
-		themeId === "pi-soft" && appTheme === "dark" && "xtermDark" in theme
+		themeId === "sd-soft" && appTheme === "dark" && "xtermDark" in theme
 			? theme.xtermDark
 			: theme.xterm;
 	const { open, collapsed } = props;

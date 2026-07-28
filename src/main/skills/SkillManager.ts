@@ -1,4 +1,4 @@
-import { shell } from "electron";
+﻿import { shell } from "electron";
 import { existsSync, type Dirent } from "node:fs";
 import {
 	mkdir,
@@ -22,12 +22,12 @@ import type { WslEnvironment } from "../wsl/WslPaths";
 
 const SKILL_FILE = "SKILL.md";
 
-/** SD Skill 库目录名 */
-const SD_SKILL_LIBRARY_DIR = "sd-skill-library";
+/** Snacode Skill 库目录名 */
+const SD_SKILL_LIBRARY_DIR = "snacode-skill-library";
 
 /**
  * 管理 SD Skill 库目录。
- * 操作 SD Skill 库全局目录，不触碰项目级 .pi/.agents skills，避免误删项目资产或绕过 trusted project 规则。
+ * 操作 SD Skill 库全局目录，不触碰项目级 .sd/.agents skills，避免误删项目资产或绕过 trusted project 规则。
  */
 export class SkillManager {
 	private locations: SkillLocation[];
@@ -44,9 +44,9 @@ export class SkillManager {
 	private buildLocations(home: string): SkillLocation[] {
 		return [
 			{
-				id: "sd-skill-library",
-				label: "SD Skill 库",
-				path: join(home, ".snacode", SD_SKILL_LIBRARY_DIR),
+			id: "snacode-skill-library",
+			label: "Snacode Skill 库",
+			path: join(home, ".snacode", SD_SKILL_LIBRARY_DIR),
 				rootMarkdownEnabled: true,
 			},
 			{
@@ -62,12 +62,12 @@ export class SkillManager {
 		const skills = (
 			await Promise.all(this.locations.map((location) => this.scanLocation(location)))
 		).flat();
-		// 按 name 去重，优先保留 pi-global 目录下的条目
+		// 按 name 去重，优先保留 snacode-global 目录下的条目
 		// （避免 ~/.sd/agent/skills/ 和 ~/.agents/skills/ 不同步导致同名重复）
 		const seen = new Map<string, SkillSummary>();
 		for (const skill of skills) {
 			const key = skill.name.toLowerCase();
-			if (!seen.has(key) || (seen.get(key)!.sourceId !== "pi-global" && skill.sourceId === "pi-global")) {
+			if (!seen.has(key) || (seen.get(key)!.sourceId !== "snacode-global" && skill.sourceId === "snacode-global")) {
 				seen.set(key, skill);
 			}
 		}
@@ -242,7 +242,7 @@ export class SkillManager {
 			warnings.push("name 只能包含字母（含中文等）、数字和单个连字符");
 		}
 		if (name.length > 64) warnings.push("name 超过 64 个字符");
-		if (!description) warnings.push("缺少 description，pi 不会加载该 skill");
+		if (!description) warnings.push("缺少 description，sd 不会加载该 skill");
 		if (description.length > 1024) warnings.push("description 超过 1024 个字符");
 		return warnings;
 	}
@@ -310,3 +310,4 @@ export class SkillManager {
 		return skill;
 	}
 }
+

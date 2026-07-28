@@ -11,8 +11,8 @@ import {
 } from "./baseUrlPath";
 import type { WslEnvironment } from "../wsl/WslPaths";
 
-/** pi 全局配置目录：~/.pi/agent/ */
-const PI_AGENT_DIR = join(homedir(), ".pi", "agent");
+/** sd 全局配置目录：~/.sd/agent/ */
+const SD_AGENT_DIR = join(homedir(), ".sd", "agent");
 
 // ── models.json 结构 ──────────────────────────────────
 // { providers: { [providerName]: { baseUrl, api, apiKey, models: [...] } } }
@@ -22,7 +22,7 @@ const PI_AGENT_DIR = join(homedir(), ".pi", "agent");
 const PROVIDER_TEST_TIMEOUT_MS = 45_000;
 const PROVIDER_TEST_TIMEOUT_SECONDS = PROVIDER_TEST_TIMEOUT_MS / 1000;
 
-export type PiModelItem = {
+export type SdModelItem = {
 	id: string;
 	name?: string;
 	reasoning?: boolean;
@@ -38,32 +38,32 @@ export type PiModelItem = {
 	[key: string]: unknown;
 };
 
-export type PiProviderConfig = {
+export type SdProviderConfig = {
 	baseUrl?: string;
 	api?: string;
 	apiKey?: string;
-	models: PiModelItem[];
+	models: SdModelItem[];
 	[key: string]: unknown;
 };
 
-export type PiModelsFile = {
-	providers: Record<string, PiProviderConfig>;
+export type SdModelsFile = {
+	providers: Record<string, SdProviderConfig>;
 };
 
 // ── auth.json 结构 ────────────────────────────────────
 // { [providerName]: { type: "api_key", key: "..." } }
 
-export type PiAuthItem = {
+export type SdAuthItem = {
 	type?: string;
 	key?: string;
 	[key: string]: unknown;
 };
 
-export type PiAuthFile = Record<string, PiAuthItem>;
+export type SdAuthFile = Record<string, SdAuthItem>;
 
 // ── settings.json ─────────────────────────────────────
 
-export type PiSettings = Record<string, unknown>;
+export type SdSettings = Record<string, unknown>;
 
 export type ConfigValidationResult = {
 	valid: boolean;
@@ -78,35 +78,35 @@ type TestRequest = {
 };
 
 /**
- * 管理 pi 全局配置文件（~/.pi/agent/ 下的 models.json、auth.json、settings.json）。
- * 按照 pi 实际文件格式解析：models.json 是嵌套 providers 结构，auth.json 是对象映射。
+ * 管理 sd 全局配置文件（~/.sd/agent/ 下的 models.json、auth.json、settings.json）。
+ * 按照 sd 实际文件格式解析：models.json 是嵌套 providers 结构，auth.json 是对象映射。
  */
 export class ConfigManager {
 	private configDir: string;
 
 	constructor(configDir?: string) {
-		this.configDir = configDir ?? PI_AGENT_DIR;
+		this.configDir = configDir ?? SD_AGENT_DIR;
 	}
 
 	/** 将配置目录切换到统一解析出的 WSL HOME；null 恢复 Windows home。 */
 	configureWsl(environment: WslEnvironment | null) {
 		this.configDir = environment
-			? join(environment.windowsHome, ".pi", "agent")
-			: PI_AGENT_DIR;
+			? join(environment.windowsHome, ".sd", "agent")
+			: SD_AGENT_DIR;
 	}
 
 	// ── 读取 ──────────────────────────────────────────────
 
-	async getModelsConfig(): Promise<ConfigFileReadResult<PiModelsFile>> {
-		return this.readJsonFile<PiModelsFile>("models.json", { providers: {} });
+	async getModelsConfig(): Promise<ConfigFileReadResult<SdModelsFile>> {
+		return this.readJsonFile<SdModelsFile>("models.json", { providers: {} });
 	}
 
-	async getAuthConfig(): Promise<ConfigFileReadResult<PiAuthFile>> {
-		return this.readJsonFile<PiAuthFile>("auth.json", {});
+	async getAuthConfig(): Promise<ConfigFileReadResult<SdAuthFile>> {
+		return this.readJsonFile<SdAuthFile>("auth.json", {});
 	}
 
-	async getSettingsConfig(): Promise<ConfigFileReadResult<PiSettings>> {
-		return this.readJsonFile<PiSettings>("settings.json", {});
+	async getSettingsConfig(): Promise<ConfigFileReadResult<SdSettings>> {
+		return this.readJsonFile<SdSettings>("settings.json", {});
 	}
 
 	async getTrustConfig(): Promise<ConfigFileReadResult<Record<string, boolean>>> {
@@ -131,8 +131,8 @@ export class ConfigManager {
 	}
 
 	/**
-	 * 查询某项目目录的信任决策，沿父目录链查找最近记录（复刻 pi 的 findNearestTrustEntry 语义）。
-	 * pi 的信任语义是父目录决策继承到子目录，例如 trust.json 记录 "C:\\Users": true，
+	 * 查询某项目目录的信任决策，沿父目录链查找最近记录（复刻 sd 的 findNearestTrustEntry 语义）。
+	 * sd 的信任语义是父目录决策继承到子目录，例如 trust.json 记录 "C:\\Users": true，
 	 * 则 C:\\Users\\14012\\project 同样视为已信任。返回 true/false；未记录返回 null。
 	 */
 	async getProjectTrustDecision(cwd: string): Promise<boolean | null> {
@@ -189,21 +189,21 @@ export class ConfigManager {
 
 	// ── 保存（可视化表单） ────────────────────────────────
 
-	async saveModelsConfig(data: PiModelsFile): Promise<ConfigValidationResult> {
+	async saveModelsConfig(data: SdModelsFile): Promise<ConfigValidationResult> {
 		const validation = this.validateModels(data);
 		if (!validation.valid) return validation;
-		// 保存前统一迁移历史别名，确保写入 models.json 的 api 名称能被 pi 官方 registry 识别。
-		await this.writeJsonFile("models.json", this.normalizeModelsForPi(data));
+		// 保存前统一迁移历史别名，确保写入 models.json 的 api 名称能被 sd 官方 registry 识别。
+		await this.writeJsonFile("models.json", this.normalizeModelsForSd(data));
 		return { valid: true };
 	}
 
-	async saveAuthConfig(data: PiAuthFile): Promise<ConfigValidationResult> {
+	async saveAuthConfig(data: SdAuthFile): Promise<ConfigValidationResult> {
 		await this.writeJsonFile("auth.json", data);
 		return { valid: true };
 	}
 
 	async saveSettingsConfig(
-		settings: PiSettings,
+		settings: SdSettings,
 	): Promise<ConfigValidationResult> {
 		await this.writeJsonFile("settings.json", settings);
 		return { valid: true };
@@ -235,7 +235,7 @@ export class ConfigManager {
 
 	// ── 校验 ──────────────────────────────────────────────
 
-	private validateModels(data: PiModelsFile): ConfigValidationResult {
+	private validateModels(data: SdModelsFile): ConfigValidationResult {
 		if (!data.providers || typeof data.providers !== "object") {
 			return { valid: false, error: "models.json 缺少 providers 字段" };
 		}
@@ -319,9 +319,9 @@ export class ConfigManager {
 	}
 
 	private docsUrlForFile(fileName: string) {
-		if (fileName === "models.json") return "https://pi.dev/docs/latest/models";
-		if (fileName === "settings.json") return "https://pi.dev/docs/latest/settings";
-		return "https://pi.dev/docs/latest/providers";
+		if (fileName === "models.json") return "https://sd.dev/docs/latest/models";
+		if (fileName === "settings.json") return "https://sd.dev/docs/latest/settings";
+		return "https://sd.dev/docs/latest/providers";
 	}
 
 	private async writeJsonFile(
@@ -635,7 +635,7 @@ export class ConfigManager {
 				};
 
 			default:
-				// openai-completions 是 pi 官方名称，对应 OpenAI Chat Completions 接口。
+				// openai-completions 是 sd 官方名称，对应 OpenAI Chat Completions 接口。
 				return {
 					url: `${this.ensureVersionPath(baseUrl)}/chat/completions`,
 					headers: {
@@ -654,7 +654,7 @@ export class ConfigManager {
 		}
 	}
 
-	private normalizeModelsForPi(data: PiModelsFile): PiModelsFile {
+	private normalizeModelsForSd(data: SdModelsFile): SdModelsFile {
 		return {
 			...data,
 			providers: Object.fromEntries(
@@ -683,7 +683,7 @@ export class ConfigManager {
 			case "openai-codex-responses":
 				return "openai-codex-responses";
 			case "openai-chat-completions":
-				// 兼容早期 snacode 暴露过的别名；pi 官方 registry 名称是 openai-completions。
+				// 兼容早期 snacode 暴露过的别名；sd 官方 registry 名称是 openai-completions。
 				return "openai-completions";
 			case "openai-completions":
 			case "openai-responses":
@@ -697,7 +697,7 @@ export class ConfigManager {
 
 	/**
 	 * 确保 OpenAI 兼容 API 的基础 URL 包含 /v1 版本路径。
-	 * 仅用于「获取模型 / 测试连接」；pi 会话不会走此补齐。
+	 * 仅用于「获取模型 / 测试连接」；sd 会话不会走此补齐。
 	 */
 	private ensureVersionPath(baseUrl: string): string {
 		return ensureOpenAiVersionPath(baseUrl);
@@ -721,7 +721,7 @@ export class ConfigManager {
 		const hasUserAgent = Object.keys(headers).some(
 			(key) => key.toLowerCase() === "user-agent",
 		);
-		// pi 的 openai-responses provider 走 OpenAI JS SDK。部分代理会按 SDK
+		// sd 的 openai-responses provider 走 OpenAI JS SDK。部分代理会按 SDK
 		// 默认 User-Agent 拦截请求，所以配置检测需要模拟该默认值，避免“检测通过、会话 403”。
 		return hasUserAgent ? headers : { ...headers, "User-Agent": "OpenAI/JS 6.26.0" };
 	}
@@ -730,7 +730,7 @@ export class ConfigManager {
 		const hasUserAgent = Object.keys(headers).some(
 			(key) => key.toLowerCase() === "user-agent",
 		);
-		// pi 的 anthropic-messages provider 走 Anthropic SDK。部分服务会验证
+		// sd 的 anthropic-messages provider 走 Anthropic SDK。部分服务会验证
 		// User-Agent 避免非官方客户端，所以需要模拟 SDK 的默认值。
 		return hasUserAgent ? headers : { ...headers, "User-Agent": "anthropic-sdk-typescript/0.27.3" };
 	}
@@ -973,9 +973,9 @@ export class ConfigManager {
 	/** 将三个配置文件打包为单个 JSON 对象，便于用户备份和迁移。 */
 	async exportConfig(): Promise<string> {
 		const [models, auth, settings] = await Promise.all([
-			this.readJsonFile<PiModelsFile>("models.json", { providers: {} }),
-			this.readJsonFile<PiAuthFile>("auth.json", {}),
-			this.readJsonFile<PiSettings>("settings.json", {}),
+			this.readJsonFile<SdModelsFile>("models.json", { providers: {} }),
+			this.readJsonFile<SdAuthFile>("auth.json", {}),
+			this.readJsonFile<SdSettings>("settings.json", {}),
 		]);
 		return JSON.stringify(
 			{

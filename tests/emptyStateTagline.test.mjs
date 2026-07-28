@@ -11,7 +11,7 @@ function cssRule(selector) {
   return matches.at(-1)?.[1] ?? "";
 }
 
-test("empty state shows the pi agent ownership tagline with branded yours", () => {
+test("empty state shows the sd agent ownership tagline with branded yours", () => {
   assert.match(parts, /className="empty-tagline"/);
   assert.match(parts, /t\("app\.emptyTaglineLine1"\)/);
   assert.match(parts, /t\("app\.emptyTaglineLine2Prefix"\)/);

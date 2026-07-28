@@ -4,7 +4,7 @@
 
 **项目名称**: Snacode
 **版本**: 0.6.6
-**描述**: 面向本地开发工作的 Electron 桌面应用，用于管理和运行 pi RPC Agent
+**描述**: 面向本地开发工作的 Electron 桌面应用，用于管理和运行 sd RPC Agent
 **技术栈**: Electron 38 + React 19 + TypeScript + Vite
 
 ---
@@ -47,7 +47,7 @@
 ```
 src/
 ├── main/              # Electron 主进程 (14个子模块)
-│   ├── pi/            # pi RPC 进程管理、消息解析
+│   ├── agent/         # sd RPC 进程管理、消息解析
 │   ├── sessions/      # 会话扫描、导入、摘要缓存
 │   ├── git/           # GitService（status/diff/commit/cherry-pick）
 │   ├── prompts/       # PromptManager + XuePromptManager
@@ -84,10 +84,10 @@ src/
 
 | 模块 | 文件 | 核心职责 |
 |------|------|----------|
-| **AgentManager** | `pi/AgentManager.ts` | Agent 生命周期管理、消息流式处理、工具调用状态追踪 |
-| **PiProcess** | `pi/PiProcess.ts` | pi 子进程启动、环境变量配置、版本检测、诊断信息 |
-| **PiRpcClient** | `pi/PiRpcClient.ts` | JSON-RPC 协议封装、请求发送与响应解析 |
-| **ConfigManager** | `config/ConfigManager.ts` | pi 配置文件管理（models.json/auth.json/settings.json） |
+| **AgentManager** | `agent/AgentManager.ts` | Agent 生命周期管理、消息流式处理、工具调用状态追踪 |
+| **SdProcess** | `agent/SdProcess.ts` | sd 子进程启动、环境变量配置、版本检测、诊断信息 |
+| **SdRpcClient** | `agent/SdRpcClient.ts` | JSON-RPC 协议封装、请求发送与响应解析 |
+| **ConfigManager** | `config/ConfigManager.ts` | sd 配置文件管理（models.json/auth.json/settings.json） |
 | **GitService** | `git/GitService.ts` | Git 操作封装、分支管理、提交历史、差异对比 |
 | **SessionScanner** | `sessions/SessionScanner.ts` | 历史会话扫描、摘要缓存、WSL 路径支持 |
 | **SettingsStore** | `settings/SettingsStore.ts` | 应用设置持久化、默认值管理 |

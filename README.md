@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [LinuxDO 友链](https://linux.do)
 
-**一个用于管理多个 [pi](https://pi.dev) 编码 Agent 会话的桌面工作台。**
+**一个用于管理多个 Snacode 编码 Agent 会话的桌面工作台。**
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -10,11 +10,11 @@
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![Version](https://img.shields.io/badge/version-0.6.6-yellow)
 
-**Snacode** 是一个开源的Pi桌面工作台，用于在本地项目目录中统一管理 pi Agent 会话，并支持导入 Codex、Claude 本地会话以便统一浏览和恢复。基于 Electron + TypeScript 构建，提供多项目工作区、AI 会话管理、Git 集成、内置终端、模型配置和插件扩展能力，让本地 AI 编码助手在多项目环境中保持统一、可追溯、可配置。
+**Snacode** 是一个开源的 AI 桌面工作台，用于在本地项目目录中统一管理 Snacode Agent 会话，并支持导入 Codex、Claude 本地会话以便统一浏览和恢复。基于 Electron + TypeScript 构建，提供多项目工作区、AI 会话管理、Git 集成、内置终端、模型配置和插件扩展能力，让本地 AI 编码助手在多项目环境中保持统一、可追溯、可配置。
 
-**适合谁用：** 希望在桌面端同时管理多个本地项目的 AI 编程助手会话、需要统一查看会话历史与 Git 状态、并希望以图形化方式管理 pi 配置的开发者。
+**适合谁用：** 希望在桌面端同时管理多个本地项目的 AI 编程助手会话、需要统一查看会话历史与 Git 状态、并希望以图形化方式管理 AI 配置的开发者。
 
-`Snacode` **不是** pi 的分支。它是一个轻量 Electron 外壳，通过启动多个 `pi --mode rpc` 进程，将项目管理、会话管理、对话界面、配置管理和工具编排整合到一个原生桌面应用中——所有 Agent 能力由 pi 原生提供。
+`Snacode` **不是**任何第三方工具的分支。它是一个完整的 AI 开发工作台，通过启动多个 `sd --mode rpc` 进程，将项目管理、会话管理、对话界面、配置管理和工具编排整合到一个原生桌面应用中——所有 Agent 能力由 Snacode 原生提供。
 
 ---
 
@@ -23,7 +23,7 @@
 > **最新版本 v0.6.6**（2026-07-24）
 
 ### v0.6.6 更新亮点
-- 🚀 **侧栏品牌区重新设计**：Pi 官方 canvas logo 裁掉空边 + Plantin 字标，agent 启停动画
+- 🚀 **侧栏品牌区重新设计**：贪吃蛇动画 logo，Agent 状态动态变化
 - 🚀 **多 Tab 文件编辑器**：最多 5 个并发 Tab，弹框/侧栏双模式，Diff 差异对比
 - 🚀 **& 会话引用**：键入 & 弹出会话列表，选择特定消息或引用全部上下文
 - 🚀 **飞书/Lark 集成**：双向对话、流式卡片、自动拉群、成员管理
@@ -42,18 +42,29 @@
 
 ## 核心功能
 
+### 🎯 ALGS 四大核心体系
+
+| 核心体系 | 说明 |
+|---|---|
+| **ALG 系统化处理** | 自适应学习生成系统，智能分析代码上下文，自动优化提示词和工作流程 |
+| **Agent 瓜分记忆体系** | 多 Agent 协同工作，智能分配任务和记忆资源，提升并发处理能力 |
+| **卡片式任务构建系统** | 可视化任务卡片，拖拽组合工作流，快速构建复杂开发任务 |
+| **LoRA 微调卡片生产管理体系** | 一键生成 LoRA 微调卡片，管理微调数据集，优化模型效果 |
+
+### 📦 基础功能
+
 | 功能 | 说明 |
 |---|---|
-| **多项目工作区** | 添加、搜索、拖动排序和切换本地项目目录，同时运行多个 pi Agent，项目间完全隔离。 |
+| **多项目工作区** | 添加、搜索、拖动排序和切换本地项目目录，同时运行多个 Snacode Agent，项目间完全隔离。 |
 | **内置 Chat 对话区** | 项目列表顶部固定 Chat 入口，写入应用用户目录，适合无需绑定代码项目的通用对话。 |
 | **计划模式 (Plan Mode)** | Composer 工具栏切换计划模式，Agent 先生成计划，逐条确认后执行，取消后返回选单。 |
 | **消息编辑/删除** | AI 回答和用户消息均支持复制、编辑和删除，编辑后回填到输入框重新发送。 |
 | **草稿本 (ScratchPad)** | 浮层式草稿本，支持内容预览、勾选映射和动画，颜色使用主题语义 token。 |
 | **内容行宽限制** | 可拖拽的内容宽度滑块，默认不限宽，往左拖逐渐变窄，适应长行代码阅读或紧凑布局需求。 |
-| **配置、Skill 与 Extension 管理** | 可视化编辑器管理 pi 的 `models.json`、`auth.json`、`settings.json`，并可管理全局 Skills 与 Extensions。 |
+| **配置、Skill 与 Extension 管理** | 可视化编辑器管理 Snacode 的 `models.json`、`auth.json`、`settings.json`，并可管理全局 Skills 与 Extensions。 |
 | **扩展启用/禁用** | 支持禁用/启用内置扩展，项目级技能/扩展管理，区分全局与项目级配置。 |
 | **信任确认系统** | 桌面端拦截信任确认，不信任仍可打开项目；有 Agent 运行时禁止删除项目。 |
-| **代理设置** | 独立管理 pi agent 子进程代理和桌面端代理，模型拉取与连接测试可走桌面端代理。 |
+| **代理设置** | 独立管理 Snacode agent 子进程代理和桌面端代理，模型拉取与连接测试可走桌面端代理。 |
 | **斜线命令 & `!` Shell** | 内置斜线命令建议（`/compact`、`/session` 等），支持 `!command` / `!!command` 在聊天输入框直接执行 Shell 命令。 |
 | **内嵌终端 Dock** | 当前 Agent 绑定独立终端 tab，支持 PowerShell/cmd/sh fallback、多 tab、主题切换、拖拽高度、右键复制选区和关闭确认。 |
 | **会话管理** | 新建会话、项目内联历史、恢复历史会话、重命名、复制、导出 HTML、删除历史会话和关闭 Agent——通过侧边栏或右键菜单即可完成。 |
@@ -105,14 +116,14 @@ Markdown 渲染 + 流式输出、活动轨迹、工具调用详情、回答级�
 Snacode
 ├─ Electron 主进程
 │  ├─ 管理项目记录
-│  ├─ 启动 pi --mode rpc 进程
+│  ├─ 启动 sd --mode rpc 进程
 │  ├─ 管理 Agent 绑定的本地 pty 终端
 │  ├─ 桥接文件、会话、Git 操作
 │  ├─ 检查 GitHub Release 更新
 │  └─ 暴露安全 IPC API
 │
 ├─ Electron Preload
-│  └─ 向 Renderer 暴露 window.piDesktop
+│  └─ 向 Renderer 暴露 window.sdDesktop
 │
 ├─ React Renderer
 │  ├─ 项目和 Agent 列表
@@ -124,13 +135,13 @@ Snacode
 │  ├─ 会话结束修改摘要与更新提示弹窗
 │  └─ 设置 UI（基础设置 / 代理设置 / 开发设置）
 │
-└─ Pi 运行时
-   ├─ 每个 Agent Tab 一个独立 pi RPC 进程
+└─ Snacode 运行时
+   ├─ 每个 Agent Tab 一个独立 sd RPC 进程
    ├─ 项目级 cwd 隔离
-   └─ 使用 pi 原生会话 / 工具 / 模型 / 上下文
+   └─ 使用 sd 原生会话 / 工具 / 模型 / 上下文
 ```
 
-核心设计原则：**一个 Agent Tab = 一个 pi RPC 进程**，确保会话隔离，让 pi 继续负责其原生能力。
+核心设计原则：**一个 Agent Tab = 一个 sd RPC 进程**，确保会话隔离，让 Snacode 继续负责其原生能力。
 
 ---
 
@@ -138,14 +149,14 @@ Snacode
 
 - Node.js 20+
 - npm
-- 系统 `PATH` 中可访问 `pi` 命令
-- 已完成 pi 的 Provider / 登录 / API Key 配置
+- 系统 `PATH` 中可访问 `sd` 命令
+- 已完成 sd 的 Provider / 登录 / API Key 配置
 
-验证 pi 是否可用：
+验证 sd 是否可用：
 
 ```bash
-pi --version
-pi --mode rpc
+sd --version
+sd --mode rpc
 ```
 
 ---
@@ -154,16 +165,16 @@ pi --mode rpc
 
 **Windows**、**macOS**、**Linux** 平台的预构建安装包在 GitHub Release 中发布：
 
-👉 **[GitHub Releases](https://github.com/ayuayue/Snacode/releases)**
+👉 **[GitHub Releases](https://github.com/FrankieYuan8828/Snacode/releases)**
 
-> Snacode 需要单独安装 `pi` CLI 并确保其加入系统 `PATH`。
+> Snacode 需要单独安装 `sd` CLI 并确保其加入系统 `PATH`。
 
 ---
 
 ## 快速开始（从源码运行）
 
 ```bash
-git clone https://github.com/ayuayue/Snacode.git
+git clone https://github.com/FrankieYuan8828/Snacode.git
 cd snacode
 npm install
 npm run make-icon
@@ -187,7 +198,7 @@ npm run dev
 
 ### 浏览器预览模式
 
-直接打开 `http://localhost:5173/` 进行布局和响应式调试。Renderer 在 `window.piDesktop` 不可用时自动降级为 mock 数据，无需 Electron 环境。但涉及 Agent、会话、文件操作等真实 IPC 功能仍需在 Electron 中验证。
+直接打开 `http://localhost:5173/` 进行布局和响应式调试。Renderer 在 `window.sdDesktop` 不可用时自动降级为 mock 数据，无需 Electron 环境。但涉及 Agent、会话、文件操作等真实 IPC 功能仍需在 Electron 中验证。
 
 ---
 
@@ -198,9 +209,9 @@ src/
 ├─ main/
 │  ├─ fs/                 # 文件树服务
 │  ├─ git/                # Git 分支服务
-│  ├─ pi/                 # Pi 进程与 RPC 管理
+│  ├─ agent/              # Agent 进程与 RPC 管理
 │  ├─ projects/           # 项目记录持久化
-│  ├─ sessions/           # Pi 会话扫描
+│  ├─ sessions/           # Agent 会话扫描
 │  ├─ settings/           # 应用设置持久化
 │  ├─ terminal/           # Agent 绑定的 pty 终端
 │  └─ index.ts            # Electron 主入口
@@ -230,6 +241,15 @@ src/
 
 ---
 
+## 作者
+
+**FrankieYuan8828**
+
+- 邮箱：frankieyuan.yyd@gmail.com
+- GitHub：[https://github.com/FrankieYuan8828](https://github.com/FrankieYuan8828)
+
+---
+
 ## 贡献者
 
 感谢所有为 Snacode 做出贡献的人！完整名单请查看 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
@@ -246,7 +266,7 @@ src/
 
 ## 安全说明
 
-本应用启动本地 `pi` 进程并通过 Electron IPC 暴露有限的文件操作。请仅运行你信任的源码。应用默认发送匿名、低频的 `app_heartbeat` 使用统计，用于了解版本分布、平台兼容性和活跃安装数量，可在设置中关闭；不会收集项目路径、代码、消息内容、会话内容或文件名，也不会上传文件。第三方统计服务会接收请求元数据。pi agent 子进程代理和桌面端模型拉取/测试代理可独立配置；系统浏览器打开的外部链接仍由系统浏览器网络设置决定。
+本应用启动本地 `sd` 进程并通过 Electron IPC 暴露有限的文件操作。请仅运行你信任的源码。应用默认发送匿名、低频的 `app_heartbeat` 使用统计，用于了解版本分布、平台兼容性和活跃安装数量，可在设置中关闭；不会收集项目路径、代码、消息内容、会话内容或文件名，也不会上传文件。第三方统计服务会接收请求元数据。sd agent 子进程代理和桌面端模型拉取/测试代理可独立配置；系统浏览器打开的外部链接仍由系统浏览器网络设置决定。
 
 ## License
 

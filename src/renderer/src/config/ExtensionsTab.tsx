@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { Copy, Download, ToggleLeft, ToggleRight, Trash2, Search, Sparkles, Clock } from "lucide-react";
 import type { CliUpdateResult, ExtensionListResult, ExtensionSummary, ExtensionPackageInfo } from "../../../shared/types";
 import { t } from "../i18n";
@@ -11,8 +11,8 @@ type GithubSearchApi = {
 };
 
 function getGithubSearchApi(): GithubSearchApi | null {
-	return (window as unknown as { piDesktop?: { githubSearch?: GithubSearchApi } })
-		.piDesktop?.githubSearch || null;
+	return (window as unknown as { snacodeDesktop?: { githubSearch?: GithubSearchApi } })
+		.snacodeDesktop?.githubSearch || null;
 }
 
 type ExtensionsApi = {
@@ -24,8 +24,8 @@ type ExtensionsApi = {
 };
 
 function getExtensionsApi(): ExtensionsApi {
-	const api = (window as unknown as { piDesktop?: { extensions?: ExtensionsApi } })
-		.piDesktop?.extensions;
+	const api = (window as unknown as { snacodeDesktop?: { extensions?: ExtensionsApi } })
+		.snacodeDesktop?.extensions;
 	if (!api) throw new Error("Snacode extensions API is not available");
 	return api;
 }
@@ -51,14 +51,14 @@ const RECOMMENDED_PACKAGES: ExtensionPackageInfo[] = [
 		},
 	},
 	{
-		name: "pi-web-access",
-		description: "网络搜索、URL 抓取、GitHub 仓库克隆、PDF 提取、YouTube 视频理解和本地视频分析。",
-		installCmd: "npm:pi-web-access",
-		tags: ["extension", "web", "search"],
-		downloads: "99K/mo",
-		updated: "2026-06-28",
-		npmUrl: "https://www.npmjs.com/package/pi-web-access",
-		repoUrl: "https://github.com/nicobailon/pi-web-access",
+			name: "snacode-web-access",
+			description: "网络搜索、URL 抓取、GitHub 仓库克隆、PDF 提取、YouTube 视频理解和本地视频分析。",
+			installCmd: "npm:snacode-web-access",
+			tags: ["extension", "web", "search"],
+			downloads: "99K/mo",
+			updated: "2026-06-28",
+			npmUrl: "https://www.npmjs.com/package/snacode-web-access",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-web-access",
 		github: {
 			stars: 956,
 			forks: 45,
@@ -69,14 +69,14 @@ const RECOMMENDED_PACKAGES: ExtensionPackageInfo[] = [
 		},
 	},
 	{
-		name: "pi-mcp-adapter",
-		description: "MCP（Model Context Protocol）适配器扩展，让 Snacode 可以连接任何 MCP 服务器。",
-		installCmd: "npm:pi-mcp-adapter",
-		tags: ["extension", "mcp"],
-		downloads: "99K/mo",
-		updated: "2026-06-15",
-		npmUrl: "https://www.npmjs.com/package/pi-mcp-adapter",
-		repoUrl: "https://github.com/nicobailon/pi-mcp-adapter",
+			name: "snacode-mcp-adapter",
+			description: "MCP（Model Context Protocol）适配器扩展，让 Snacode 可以连接任何 MCP 服务器。",
+			installCmd: "npm:snacode-mcp-adapter",
+			tags: ["extension", "mcp"],
+			downloads: "99K/mo",
+			updated: "2026-06-15",
+			npmUrl: "https://www.npmjs.com/package/snacode-mcp-adapter",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-mcp-adapter",
 		github: {
 			stars: 620,
 			forks: 32,
@@ -87,14 +87,14 @@ const RECOMMENDED_PACKAGES: ExtensionPackageInfo[] = [
 		},
 	},
 	{
-		name: "@samfp/pi-memory",
-		description: "长期记忆扩展，用于在 Snacode 会话之间保存和检索偏好、项目事实与经验教训。",
-		installCmd: "npm:@samfp/pi-memory",
-		tags: ["extension", "memory"],
-		downloads: "45K/mo",
-		updated: "2026-05-20",
-		npmUrl: "https://pi.dev/packages/@samfp/pi-memory?name=%40samfp%2Fpi-memory",
-		repoUrl: "https://github.com/samfp/pi-memory",
+			name: "@snacode/snacode-memory",
+			description: "长期记忆扩展，用于在 Snacode 会话之间保存和检索偏好、项目事实与经验教训。",
+			installCmd: "npm:@snacode/snacode-memory",
+			tags: ["extension", "memory"],
+			downloads: "45K/mo",
+			updated: "2026-05-20",
+			npmUrl: "https://www.npmjs.com/package/@snacode/snacode-memory",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-memory",
 		github: {
 			stars: 420,
 			forks: 28,
@@ -105,14 +105,14 @@ const RECOMMENDED_PACKAGES: ExtensionPackageInfo[] = [
 		},
 	},
 	{
-		name: "pi-subagents",
-		description: "任务委派扩展，支持链式、并行执行和 TUI 澄清。可将复杂任务拆解给多个子 Agent。",
-		installCmd: "npm:pi-subagents",
-		tags: ["extension", "subagents", "parallel"],
-		downloads: "92K/mo",
-		updated: "2026-07-10",
-		npmUrl: "https://www.npmjs.com/package/pi-subagents",
-		repoUrl: "https://github.com/nicobailon/pi-subagents",
+			name: "snacode-subagents",
+			description: "任务委派扩展，支持链式、并行执行和 TUI 澄清。可将复杂任务拆解给多个子 Agent。",
+			installCmd: "npm:snacode-subagents",
+			tags: ["extension", "subagents", "parallel"],
+			downloads: "92K/mo",
+			updated: "2026-07-10",
+			npmUrl: "https://www.npmjs.com/package/snacode-subagents",
+			repoUrl: "https://github.com/FrankieYuan8828/snacode-subagents",
 		github: {
 			stars: 875,
 			forks: 56,
@@ -331,9 +331,9 @@ export function ExtensionsTab(props: {
 							key={pkg.name}
 							className="extensions-recommended-row"
 							onClick={() => {
-								// pi.dev 的详情路由使用 npm 包名,但查询参数可能是扩展内部展示名。
-								const packageName = pkg.piPackageName ?? pkg.name;
-								window.open(`https://pi.dev/packages/${pkg.name}?name=${packageName}`, '_blank');
+								// sd.dev 的详情路由使用 npm 包名,但查询参数可能是扩展内部展示名。
+								const packageName = pkg.sdPackageName ?? pkg.name;
+								window.open(`https://sd.dev/packages/${pkg.name}?name=${packageName}`, '_blank');
 							}}
 							title={`${t("config.openPackageDetail")}: ${pkg.name}`}
 						>
@@ -391,7 +391,7 @@ export function ExtensionsTab(props: {
 									title={t("common.copy")}
 									onClick={(e) => {
 										e.stopPropagation();
-										const cmd = `pi install ${pkg.installCmd}`;
+										const cmd = `snacode install ${pkg.installCmd}`;
 										navigator.clipboard.writeText(cmd);
 										showNotice(t("app.codeCopied"), 1200);
 									}}

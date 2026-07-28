@@ -1,4 +1,4 @@
-import { showNotice } from "./utils/notice";
+﻿import { showNotice } from "./utils/notice";
 import { Component, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { SnacodeDesktopApi } from "../../preload";
 import { AuthTab } from "./config/AuthTab";
@@ -26,8 +26,8 @@ import type {
 import type { ConfigFileDiagnostic, CreatePromptTemplateInput, ExtensionListResult, ExtensionSummary, PromptTemplateListResult, PromptTemplateSummary, SkillListResult, SkillLocation, SkillSummary } from "../../shared/types";
 import { getProviderHeaders, KNOWN_PROVIDER_ENDPOINTS } from "./config/providerHeaders";
 
-const api: SnacodeDesktopApi = (window as unknown as { piDesktop: SnacodeDesktopApi })
-	.piDesktop;
+const api: SnacodeDesktopApi = (window as unknown as { snacodeDesktop: SnacodeDesktopApi })
+	.snacodeDesktop;
 const DEFAULT_MODEL_CONFIG: Pick<
 	ModelItem,
 	"contextWindow" | "maxTokens" | "reasoning" | "input"
@@ -40,7 +40,7 @@ const DEFAULT_MODEL_CONFIG: Pick<
 
 /**
  * 配置页必须能打开用户手写/旧版本生成的非标准 models.json。
- * pi 自身对配置较宽松，但 UI 会访问 provider.models.length / map；这里先把缺失或异常字段归一化，
+ * sd 自身对配置较宽松，但 UI 会访问 provider.models.length / map；这里先把缺失或异常字段归一化，
  * 避免单个 provider 配置错误导致整个 renderer 白屏。
  */
 function normalizeModelsFile(value: unknown): ModelsFile {
@@ -152,9 +152,9 @@ class ConfigModalErrorBoundary extends Component<
 								<span>{this.state.error.message}</span>
 								<small>
 									{t("config.renderCrashedHelpPrefix")}
-									<a href="https://pi.dev/docs/latest/models" target="_blank" rel="noreferrer">{t("config.docsModels")}</a>
+									<a href="https://sd.dev/docs/latest/models" target="_blank" rel="noreferrer">{t("config.docsModels")}</a>
 									{" / "}
-									<a href="https://pi.dev/docs/latest/settings" target="_blank" rel="noreferrer">{t("config.docsSettings")}</a>
+									<a href="https://sd.dev/docs/latest/settings" target="_blank" rel="noreferrer">{t("config.docsSettings")}</a>
 									{t("config.renderCrashedHelpSuffix")}
 								</small>
 							</div>
@@ -208,7 +208,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 	const [uninstallingExtensionSource, setUninstallingExtensionSource] = useState<string | null>(null);
 	const [newSkillName, setNewSkillName] = useState("");
 	const [newSkillDescription, setNewSkillDescription] = useState("");
-	const [newSkillLocationId, setNewSkillLocationId] = useState<SkillLocation["id"]>("pi-global");
+	const [newSkillLocationId, setNewSkillLocationId] = useState<SkillLocation["id"]>("snacode-global");
 	const [deleteSkillConfirm, setDeleteSkillConfirm] = useState<SkillSummary | null>(null);
 	const [editingGlobalSkill, setEditingGlobalSkill] = useState<SkillSummary | null>(null);
 	const [editGlobalContent, setEditGlobalContent] = useState("");
@@ -450,12 +450,12 @@ function ConfigModalContent(props: ConfigModalProps) {
 	/**
 	 * 模型配置保存后，通知所有运行中的 Agent 尝试刷新模型配置。
 	 *
-	 * 当前仅尝试 reload_config RPC（策略 1），pi 0.80.10 尚未支持此命令，
+	 * 当前仅尝试 reload_config RPC（策略 1），sd 0.80.10 尚未支持此命令，
 	 * 因此实际为 no-op。进程重启方案（策略 2）已注释，原因：
 	 *   - 运行中重启会打断用户对话/工具执行
 	 *   - 涉及 exit 事件竞态、模型恢复等复杂边界
 	 *
-	 * pi 合并 https://github.com/earendil-works/pi/issues/6890 后自动生效。
+	 * sd 合并 https://github.com/earendil-works/sd/issues/6890 后自动生效。
 	 */
 	const refreshRunningAgents = async () => {
 		try {
@@ -477,7 +477,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 				}
 			}
 
-			// pi 官方尚未支持 reload_config RPC，刷新实际为 no-op，先注释提示避免误导
+			// sd 官方尚未支持 reload_config RPC，刷新实际为 no-op，先注释提示避免误导
 			// if (refreshed > 0 && failed === 0) {
 			// 	showToast(t("config.modelsRefreshed", { count: refreshed }));
 			// } else if (refreshed > 0) {
@@ -601,7 +601,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 
 	/**
 	 * 检测成功且实际走通 /v1（或 /v1beta）时，把表单里的 baseUrl 自动改成带版本路径。
-	 * 原因：检测侧会兼容补路径，但 pi 会话会原样读 models.json；不改写则「测试正常、会话 404」。
+	 * 原因：检测侧会兼容补路径，但 sd 会话会原样读 models.json；不改写则「测试正常、会话 404」。
 	 * 仅改内存表单，需用户点保存后才写入磁盘。
 	 * 后端仅在确实需要改写时返回 suggestedBaseUrl，前端直接应用即可。
 	 */
@@ -796,7 +796,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 		else delete nextThinkingLevelMap.xhigh;
 		const nextModel = {
 			...currentModel,
-			// xhigh 只有 reasoning 模型才有意义；打开映射时同步开启，避免保存后 UI 看似配置成功但 pi 仍不展示思考档位。
+			// xhigh 只有 reasoning 模型才有意义；打开映射时同步开启，避免保存后 UI 看似配置成功但 sd 仍不展示思考档位。
 			reasoning: value ? true : currentModel.reasoning,
 		};
 		if (Object.keys(nextThinkingLevelMap).length > 0) {
@@ -874,7 +874,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 		await loadConfig("models");
 
 		// 保存后自动刷新所有运行中的 Agent，使模型配置实时生效
-		// pi 官方尚未支持，先注释
+		// sd 官方尚未支持，先注释
 		// void refreshRunningAgents();
 	};
 
@@ -996,7 +996,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 		if (isModelsFile) {
 			await loadConfig("models");
 			// Raw 保存也触发模型刷新，确保运行中的 Agent 实时生效
-			// pi 官方尚未支持，先注释
+			// sd 官方尚未支持，先注释
 			// void refreshRunningAgents();
 		} else if (rawFileName === "auth.json") await loadConfig("auth");
 		else if (rawFileName === "trust.json") await loadConfig("trust");
@@ -1257,7 +1257,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 		setEditGlobalLoading(true);
 		setError(null);
 		try {
-			const content = await window.piDesktop.files.readContent(skill.path);
+			const content = await window.snacodeDesktop.files.readContent(skill.path);
 			setEditGlobalContent(content);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -1286,7 +1286,7 @@ function ConfigModalContent(props: ConfigModalProps) {
 		setEditGlobalSaving(true);
 		setError(null);
 		try {
-			await window.piDesktop.files.writeContent(editingGlobalSkill.path, editGlobalContent);
+			await window.snacodeDesktop.files.writeContent(editingGlobalSkill.path, editGlobalContent);
 			setEditGlobalSaved(true);
 			window.setTimeout(() => setEditGlobalSaved(false), 2000);
 			await refreshSkills();

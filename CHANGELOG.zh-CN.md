@@ -110,7 +110,7 @@
 
 感谢所有贡献者提交的 PR、Issue 和反馈：
 
-- **@1900EasonJin** — 飞书集成、记忆管理卡片、Thinking 节流、侧栏卡片化设计、
+- **@FrankieYuan8828** — 飞书集成、记忆管理卡片、Thinking 节流、侧栏卡片化设计、
   草稿本、终端编码修复 (#80, #74, #60, #44, #42, #35, #34)
 - **@frostime** — 会话信息同步、自定义字体/缩放、模型选择器自动滚动、
   最大推理等级、RPC 扩展生命周期 (#58, #56, #53, #52, #50)
@@ -133,7 +133,7 @@
 ### 🚀 新功能
 
 - **Prompt 模板系统（大块）**
-  - `PromptManager` 完整 CRUD 和 IPC 桥，管理 `~/.pi/agent/prompts/` 模板
+  - `PromptManager` 完整 CRUD 和 IPC 桥，管理 `~/.sd/agent/prompts/` 模板
   - `PromptsTab` 配置页（Monaco 编辑器创建/编辑/预览/删除）
   - 输入框 `/` picker 选择模板，`$N` 占位符自动提示
   - 项目级 prompt（ProjectResourcesModal 内创建/编辑/删除）
@@ -377,7 +377,7 @@
 ### 📦 工程
 
 - 恢复 package.json/package-lock.json 至上游版本
-- 添加 @1900EasonJin 到贡献者列表
+- 添加 @FrankieYuan8828 到贡献者列表
 
 ### 📖 文档
 
@@ -390,7 +390,7 @@
 
 ### 🤝 贡献者
 
-感谢 @ayuayue、@1900EasonJin、@zx3022448 对本版本的贡献！
+感谢 @ayuayue、@FrankieYuan8828、@zx3022448 对本版本的贡献！
 
 ## v0.6.2 - 2026-06-22
 
@@ -518,7 +518,7 @@
 ## v0.4.17 - 2026-06-11
 
 ### 新增
-- 全局 Skill 管理：配置弹窗新增独立 Skills 页面，可列出 `~/.pi/agent/skills` 和 `~/.agents/skills` 中的全局 Skill。
+- 全局 Skill 管理：配置弹窗新增独立 Skills 页面，可列出 `~/.sd/agent/skills` 和 `~/.agents/skills` 中的全局 Skill。
 - Skill 操作：支持创建 Skill 模板、启用/禁用模型自动调用、通过应用内确认弹窗删除 Skill，以及打开 Skill 所在目录。
 - pi 路径手动兜底：自动检测失败时可输入自定义 pi 路径，设置页会常驻显示当前实际使用的 pi 路径。
 

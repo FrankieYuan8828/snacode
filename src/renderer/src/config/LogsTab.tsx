@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SnacodeDesktopApi } from "../../../preload";
 import type { AppLogEntry, AppLogLevel } from "../../../shared/types";
 import { SelectField } from "../components/ui/SelectField";
 import { t } from "../i18n";
 
-const api: SnacodeDesktopApi = (window as unknown as { piDesktop: SnacodeDesktopApi }).piDesktop;
+const api: SnacodeDesktopApi = (window as unknown as { snacodeDesktop: SnacodeDesktopApi }).snacodeDesktop;
 const LEVELS: Array<AppLogLevel | "all"> = ["all", "debug", "info", "warn", "error"];
 
 function formatTime(time: number) {

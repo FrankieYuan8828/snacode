@@ -18,6 +18,8 @@ export interface ModalProps {
 	className?: string;
 	/** 额外的 content wrapper class */
 	contentClassName?: string;
+	/** 是否禁止点击空白处关闭（默认 true，必须通过关闭按钮关闭） */
+	preventOutsideClose?: boolean;
 }
 
 /**
@@ -37,9 +39,18 @@ export function Modal({
 	children,
 	className,
 	contentClassName,
+	preventOutsideClose = true,
 }: ModalProps) {
 	return (
-		<Dialog.Root open={open} onOpenChange={(open) => !open && onClose()}>
+		<Dialog.Root 
+			open={open} 
+			onOpenChange={(isOpen) => {
+				// 只有在允许点击空白处关闭时才响应
+				if (!isOpen && !preventOutsideClose) {
+					onClose();
+				}
+			}}
+		>
 			<Dialog.Portal>
 				<Dialog.Overlay
 					className={["modal-radix-overlay", className].filter(Boolean).join(" ")}
@@ -58,14 +69,14 @@ export function Modal({
 							<Dialog.Title asChild>
 								<strong>{title}</strong>
 							</Dialog.Title>
-							<Dialog.Close asChild>
-								<button
-									type="button"
-									aria-label="Close"
-								>
-									✕
-								</button>
-							</Dialog.Close>
+							{/* 使用自定义关闭按钮，直接调用 onClose */}
+							<button
+								type="button"
+								aria-label="Close"
+								onClick={onClose}
+							>
+								✕
+							</button>
 						</div>
 					)}
 					{children}

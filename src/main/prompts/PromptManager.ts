@@ -84,12 +84,12 @@ const BUILTIN_TEMPLATES: PromptTemplateSummary[] = [
 		scope: "global",
 	},
 	{
-		name: "pi-system",
-		path: "builtin://pi-system",
-		description: "View pi's default system prompt (identity, tools, guidelines)",
+		name: "sd-system",
+		path: "builtin://sd-system",
+		description: "View sd's default system prompt (identity, tools, guidelines)",
 		content: makeBuiltinContent(
-			"Pi system prompt",
-			"这是 pi 的默认系统提示词——核心身份描述、可用工具列表、行为准则和文档路径，定义了 AI agent 的行为基础。\n\n---\n\nYou are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.\n\nAvailable tools:\n- read: Read file contents\n- bash: Execute bash commands (ls, grep, find, etc.)\n- edit: Make precise file edits with exact text replacement, including multiple disjoint edits in one call\n- write: Create or overwrite files\n- ask_question: Ask the user a question (or a batch of questions) and wait for responses\n- todo: Manage a todo list (add / toggle / clear)\n- web_search: Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles\n- fetch_content: Use to extract readable content from URL(s), YouTube, GitHub repos, or local videos\n- mcp: MCP gateway - connect to MCP servers and call their tools\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n\nGuidelines:\n- Use bash for file operations like ls, rg, find\n- Use read to examine files instead of cat or sed.\n- Use edit for precise changes\n- Keep edits[].oldText as small as possible while still being unique\n- Be concise in your responses\n- Show file paths clearly when working with files\n\nCurrent date: YYYY-MM-DD\nCurrent working directory: /path/to/project",
+			"Sd system prompt",
+			"这是 sd 的默认系统提示词——核心身份描述、可用工具列表、行为准则和文档路径，定义了 AI agent 的行为基础。\n\n---\n\nYou are an expert coding assistant operating inside sd, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.\n\nAvailable tools:\n- read: Read file contents\n- bash: Execute bash commands (ls, grep, find, etc.)\n- edit: Make precise file edits with exact text replacement, including multiple disjoint edits in one call\n- write: Create or overwrite files\n- ask_question: Ask the user a question (or a batch of questions) and wait for responses\n- todo: Manage a todo list (add / toggle / clear)\n- web_search: Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles\n- fetch_content: Use to extract readable content from URL(s), YouTube, GitHub repos, or local videos\n- mcp: MCP gateway - connect to MCP servers and call their tools\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n\nGuidelines:\n- Use bash for file operations like ls, rg, find\n- Use read to examine files instead of cat or sed.\n- Use edit for precise changes\n- Keep edits[].oldText as small as possible while still being unique\n- Be concise in your responses\n- Show file paths clearly when working with files\n\nCurrent date: YYYY-MM-DD\nCurrent working directory: /path/to/project",
 		),
 		userCreated: false,
 		scope: "global",
@@ -166,19 +166,19 @@ when appropriate. If unsure whether a skill is needed, follow the rule:
 /**
  * 管理 Snacode 全局 Prompt Templates 目录 (~/.sd/agent/prompts/)。
  * 
- * Prompt Templates 是 markdown 文件，用户可在 pi 中输入 /<name> 快速展开。
+ * Prompt Templates 是 markdown 文件，用户可在 sd 中输入 /<name> 快速展开。
  * frontmatter 支持 description、argument-hint 等元数据。
  */
 export class PromptManager {
 	private promptsDir: string;
 
 	constructor(home?: string) {
-		this.promptsDir = join(home ?? homedir(), ".pi", "agent", "prompts");
+		this.promptsDir = join(home ?? homedir(), ".sd", "agent", "prompts");
 	}
 
 	/** 将 prompt 目录切换到统一解析出的 WSL HOME；null 恢复 Windows home。 */
 	configureWsl(environment: WslEnvironment | null) {
-		this.promptsDir = join(environment?.windowsHome ?? homedir(), ".pi", "agent", "prompts");
+		this.promptsDir = join(environment?.windowsHome ?? homedir(), ".sd", "agent", "prompts");
 	}
 
 	getDir(): string {
@@ -257,9 +257,9 @@ export class PromptManager {
 		await rm(filePath, { force: true });
 	}
 
-	/** 扫描项目 .pi/prompts/ 目录下的模板 */
+	/** 扫描项目 .sd/prompts/ 目录下的模板 */
 	async listByProject(projectPath: string): Promise<PromptTemplateListResult> {
-		const projectPromptsDir = join(projectPath, ".pi", "prompts");
+		const projectPromptsDir = join(projectPath, ".sd", "prompts");
 		const entries = await readdir(projectPromptsDir).catch(() => []);
 		const templates: PromptTemplateSummary[] = [];
 		for (const entry of entries) {
@@ -285,12 +285,12 @@ export class PromptManager {
 		return { templates, globalDir: projectPromptsDir };
 	}
 
-	/** 在项目 .pi/prompts/ 下创建模板 */
+	/** 在项目 .sd/prompts/ 下创建模板 */
 	async createInProject(
 		projectPath: string,
 		input: CreatePromptTemplateInput,
 	): Promise<PromptTemplateSummary> {
-		const projectPromptsDir = join(projectPath, ".pi", "prompts");
+		const projectPromptsDir = join(projectPath, ".sd", "prompts");
 		await mkdir(projectPromptsDir, { recursive: true });
 		const name = this.normalizeName(input.name);
 		if (!name) throw new Error("模板名称不能为空，且至少包含一个字母或数字");
@@ -311,9 +311,9 @@ export class PromptManager {
 		};
 	}
 
-	/** 从项目 .pi/prompts/ 删除模板 */
+	/** 从项目 .sd/prompts/ 删除模板 */
 	async deleteFromProject(projectPath: string, fileName: string): Promise<void> {
-		const filePath = join(projectPath, ".pi", "prompts", fileName);
+		const filePath = join(projectPath, ".sd", "prompts", fileName);
 		if (!existsSync(filePath)) throw new Error("模板文件不存在");
 		await rm(filePath, { force: true });
 	}
@@ -384,7 +384,7 @@ export class PromptManager {
 
 	/** 重命名项目级模板 */
 	async renameInProject(projectPath: string, oldName: string, newName: string): Promise<PromptTemplateSummary> {
-		const projectPromptsDir = join(projectPath, ".pi", "prompts");
+		const projectPromptsDir = join(projectPath, ".sd", "prompts");
 		const normalizedOld = this.normalizeName(oldName);
 		const normalizedNew = this.normalizeName(newName);
 		if (!normalizedOld || !normalizedNew) throw new Error("模板名称不能为空");

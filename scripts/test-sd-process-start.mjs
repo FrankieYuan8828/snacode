@@ -25,23 +25,23 @@ async function loadTsModule(filePath, replacements = {}) {
 	return import(pathToFileURL(out).href);
 }
 
-const rpcModule = await loadTsModule("src/main/pi/PiRpcClient.ts");
+const rpcModule = await loadTsModule("src/main/agent/SdRpcClient.ts");
 const wslPathsModule = await loadTsModule("src/main/wsl/WslPaths.ts");
 globalThis.__SnacodeTestDeps = {
-	PiRpcClient: rpcModule.PiRpcClient,
+	SdRpcClient: rpcModule.SdRpcClient,
 	toWindowsHostPath: wslPathsModule.toWindowsHostPath,
 	toWslLinuxPath: wslPathsModule.toWslLinuxPath,
 };
-const piProcessModule = await loadTsModule("src/main/pi/PiProcess.ts", {
-	'import { PiRpcClient } from "./PiRpcClient";': "const { PiRpcClient } = globalThis.__SnacodeTestDeps;",
-	'import { PiLocator } from "./PiLocator";': "class PiLocator {}",
+const sdProcessModule = await loadTsModule("src/main/agent/SdProcess.ts", {
+	'import { SdRpcClient } from "./SdRpcClient";': "const { SdRpcClient } = globalThis.__SnacodeTestDeps;",
+	'import { SdLocator } from "./SdLocator";': "class SdLocator {}",
 	'import type { AppSettings } from "../../shared/types";': "",
 	'import { toWindowsHostPath, toWslLinuxPath } from "../wsl/WslPaths";': "const { toWindowsHostPath, toWslLinuxPath } = globalThis.__SnacodeTestDeps;",
 	"const AppSettings = undefined;": "",
 });
 
-const { PiProcess } = piProcessModule;
-const scriptPath = join(tmpdir(), `fake-pi-${Date.now()}.mjs`);
+const { SdProcess } = sdProcessModule;
+const scriptPath = join(tmpdir(), `fake-sd-${Date.now()}.mjs`);
 writeFileSync(scriptPath, `
 const mode = process.argv[2];
 if (mode === '--version') {
@@ -71,17 +71,17 @@ class FakeLocator {
 	}
 }
 
-mkdirSync(join(tmpdir(), "Snacode-pi-process-test"), { recursive: true });
-const proc = new PiProcess(join(tmpdir(), "Snacode-pi-process-test"), {}, new FakeLocator());
+mkdirSync(join(tmpdir(), "Snacode-sd-process-test"), { recursive: true });
+const proc = new SdProcess(join(tmpdir(), "Snacode-sd-process-test"), {}, new FakeLocator());
 const startedAt = performance.now();
 const clientPromise = proc.start(undefined, "no-approve");
 const startElapsed = performance.now() - startedAt;
 assert.ok(
 	startElapsed < 500,
-	`PiProcess.start should not wait for slow pi --version, took ${startElapsed.toFixed(0)}ms`,
+	`SdProcess.start should not wait for slow sd --version, took ${startElapsed.toFixed(0)}ms`,
 );
 const client = await clientPromise;
 const response = await client.request({ type: "get_state" }, 2_000);
 assert.equal(response.success, true);
 proc.stop();
-console.log("pi process start tests passed");
+console.log("sd process start tests passed");

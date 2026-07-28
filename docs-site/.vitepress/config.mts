@@ -1,13 +1,13 @@
 import { defineConfig } from "vitepress";
 
-// 自定义域名部署在站点根路径；本地/兼容旧 github.io 子路径时可用 VITEPRESS_BASE=/Snacode/
-const base = process.env.VITEPRESS_BASE ?? "/";
-// 官网正式入口：自定义域名（GitHub Pages Settings + public/CNAME）
-const siteOrigin = process.env.DOCS_SITE_ORIGIN ?? "https://Snacode.caoayu.top";
+// GitHub Pages 默认域名部署在 /snacode/ 子路径；本地开发时 VITEPRESS_BASE=/
+const base = process.env.VITEPRESS_BASE ?? "/snacode/";
+// 站点入口地址
+const siteOrigin = process.env.DOCS_SITE_ORIGIN ?? "https://frankieyuan8828.github.io/snacode";
 
 export default defineConfig({
-  title: "Snacode - pi Agent Desktop Workbench",
-  description: "Snacode is an open-source desktop workbench for managing multiple pi AI coding agents across local project folders. Features session history, Git integration, built-in terminal, and visual config management.",
+  title: "Snacode - sd Agent Desktop Workbench",
+  description: "Snacode is an open-source desktop workbench for managing multiple sd AI coding agents across local project folders. Features session history, Git integration, built-in terminal, and visual config management.",
   lang: "zh-CN",
   base,
   cleanUrls: true,
@@ -15,20 +15,20 @@ export default defineConfig({
   head: [
     ["link", { rel: "icon", href: `${base}icon.svg` }],
     ["link", { rel: "canonical", href: `${siteOrigin}/` }],
-    ["meta", { name: "keywords", content: "Snacode, pi, pi-agent, ai-coding-agent, desktop, electron, rpc, local-ai, developer-tools, coding-assistant, workspace, session-management, git, terminal, windows, macos, linux, open-source" }],
-    ["meta", { name: "author", content: "ayuayue" }],
+    ["meta", { name: "keywords", content: "Snacode, sd, sd-agent, ai-coding-agent, desktop, electron, rpc, local-ai, developer-tools, coding-assistant, workspace, session-management, git, terminal, windows, macos, linux, open-source" }],
+    ["meta", { name: "author", content: "FrankieYuan8828" }],
     ["meta", { name: "robots", content: "index, follow" }],
     ["meta", { property: "og:site_name", content: "Snacode" }],
-    ["meta", { property: "og:title", content: "Snacode - pi Agent Desktop Workbench" }],
-    ["meta", { property: "og:description", content: "Open-source desktop workbench to manage pi AI coding agents across local project folders. Features session history, Git integration, terminal, and plugin management." }],
+    ["meta", { property: "og:title", content: "Snacode - sd Agent Desktop Workbench" }],
+    ["meta", { property: "og:description", content: "Open-source desktop workbench to manage sd AI coding agents across local project folders. Features session history, Git integration, terminal, and plugin management." }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:url", content: `${siteOrigin}/` }],
     ["meta", { property: "og:image", content: `${siteOrigin}/og-image.png` }],
     ["meta", { property: "og:image:width", content: "1200" }],
     ["meta", { property: "og:image:height", content: "630" }],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
-    ["meta", { name: "twitter:title", content: "Snacode - pi Agent Desktop Workbench" }],
-    ["meta", { name: "twitter:description", content: "Manage multiple pi AI coding agents in local workspaces. Open-source desktop app with sessions, Git, terminal, and extensions." }],
+    ["meta", { name: "twitter:title", content: "Snacode - sd Agent Desktop Workbench" }],
+    ["meta", { name: "twitter:description", content: "Manage multiple sd AI coding agents in local workspaces. Open-source desktop app with sessions, Git, terminal, and extensions." }],
     ["meta", { name: "twitter:image", content: `${siteOrigin}/og-image.png` }],
     [
       "script",
@@ -39,15 +39,15 @@ export default defineConfig({
         "name": "Snacode",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows, macOS, Linux",
-        "description": "Open-source desktop workbench for managing multiple pi AI coding agents across local project folders.",
+        "description": "Open-source desktop workbench for managing multiple sd AI coding agents across local project folders.",
         "url": siteOrigin,
-        "downloadUrl": "https://github.com/ayuayue/Snacode/releases",
-        "sourceCodeRepository": "https://github.com/ayuayue/Snacode",
+        "downloadUrl": "https://github.com/FrankieYuan8828/snacode/releases",
+        "sourceCodeRepository": "https://github.com/FrankieYuan8828/snacode",
         "license": "https://opensource.org/licenses/MIT",
         "author": {
           "@type": "Organization",
-          "name": "ayuayue",
-          "url": "https://github.com/ayuayue"
+          "name": "FrankieYuan8828",
+          "url": "https://github.com/FrankieYuan8828"
         },
         "offers": {
           "@type": "Offer",
@@ -69,9 +69,9 @@ export default defineConfig({
       { text: "对比", link: "/guide/comparison" },
       { text: "更新日志", link: "/changelog" },
       {
-        text: "下载",
-        link: "https://github.com/ayuayue/Snacode/releases",
-      },
+	        text: "下载",
+	        link: "https://github.com/FrankieYuan8828/snacode/releases",
+	      },
     ],
     sidebar: {
       "/guide/": [
@@ -91,7 +91,7 @@ export default defineConfig({
       ],
     },
     socialLinks: [
-      { icon: "github", link: "https://github.com/ayuayue/Snacode" },
+      { icon: "github", link: "https://github.com/FrankieYuan8828/snacode" },
     ],
     search: {
       provider: "local",
@@ -112,12 +112,12 @@ export default defineConfig({
       },
     },
     editLink: {
-      pattern: "https://github.com/ayuayue/Snacode/edit/main/docs-site/:path",
+      pattern: "https://github.com/FrankieYuan8828/snacode/edit/main/docs-site/:path",
       text: "在 GitHub 上编辑此页",
     },
     footer: {
       message: "Released under the MIT License.",
-      copyright: "Copyright © 2026 ayuayue",
+      copyright: "Copyright © 2026 FrankieYuan8828",
     },
   },
 });

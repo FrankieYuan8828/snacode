@@ -18,8 +18,8 @@ import type {
 	ThinkingUpdate,
 } from "../../shared/types";
 import { ipcChannels } from "../../shared/ipc";
-import { SdProcess } from "./PiProcess";
-import type { RpcResponse } from "./PiRpcClient";
+import { SdProcess } from "./SdProcess";
+import type { RpcResponse } from "./SdRpcClient";
 import { formatBashToolMessage } from "./bashResult";
 import { extractMessageText } from "./messageContent";
 import { mergeHistoryWithPreservedMessages } from "./historyMessages";
@@ -54,7 +54,7 @@ export class AgentManager {
 	private readonly streamingThinking = new Map<string, string>();
 	/** 当前正在流式更新的 assistant 消息；tool 事件插入时仍要继续更新同一个回答块。 */
 	private readonly activeAssistantMessageIds = new Map<string, string>();
-	/** pi 的 toolCallId 贯穿 start/update/end，用它把同一次工具调用合并成一条 UI 记录。 */
+	/** sd 的 toolCallId 贯穿 start/update/end，用它把同一次工具调用合并成一条 UI 记录。 */
 	private readonly toolMessageIds = new Map<string, Map<string, string>>();
 	/** 每个 agent 只保留一条自动重试状态消息，避免短暂 5xx/网络错误把会话刷屏。 */
 	private readonly retryStatusMessageIds = new Map<string, string>();
@@ -81,13 +81,13 @@ export class AgentManager {
 	private static readonly MESSAGE_FLUSH_INTERVAL_MS = 50;
 	/**
 	 * agent_end 后等待 agent_settled 的超时时间（毫秒）。
-	 * 如果 Pi 在此时间内未发送 agent_settled，桌面端将主动查询 get_state 并尝试恢复 idle。
-	 * 这补偿了 Pi 在某些边缘情况下不发送 agent_settled 导致动画永久卡住的问题。
+	 * 如果 Sd 在此时间内未发送 agent_settled，桌面端将主动查询 get_state 并尝试恢复 idle。
+	 * 这补偿了 Sd 在某些边缘情况下不发送 agent_settled 导致动画永久卡住的问题。
 	 */
 	private static readonly AGENT_SETTLED_TIMEOUT_MS = 5000;
 	/**
 	 * 超过该大小的历史会话跳过 get_messages RPC，改为直接从 JSONL 文件尾部读取最近 N 条消息。
-	 * pi 当前不支持 limit/cursor，40MB JSONL 会以单行大 JSON 返回，主进程 JSON.parse 会短暂冻结整个应用。
+	 * sd 当前不支持 limit/cursor，40MB JSONL 会以单行大 JSON 返回，主进程 JSON.parse 会短暂冻结整个应用。
 	 * 文件直接读取仅解析近尾部少量消息，避免大会话加载导致的界面冻结。
 	 */
 	private static readonly MAX_AUTO_HISTORY_LOAD_BYTES = 5 * 1024 * 1024;
@@ -111,9 +111,9 @@ export class AgentManager {
 	/** 正在执行手动压缩操作的 agent，用于区分手动压缩重启和异常崩溃 */
 	private readonly compactingAgents = new Set<string>();
 	/**
-	 * Pi 通过事件报告正在自动/手动压缩的 agent。
+	 * Sd通过事件报告正在自动/手动压缩的 agent。
 	 * 自动压缩发生在 agent_end 之后，桌面端若不单独追踪，会过早把会话置为 idle，
-	 * 用户随后发送的新消息可能撞上 Pi 内部 compaction，表现为“会话中断”。
+	 * 用户随后发送的新消息可能撞上 Sd内部 compaction，表现为“会话中断”。
 	 */
 	private readonly rpcCompactingAgents = new Set<string>();
 	/** 正在执行模型配置刷新的 agent，用于退出处理器中忽略进程退出事件 */
@@ -123,16 +123,16 @@ export class AgentManager {
 	/** 已尝试过自动重连的 agent（防止无限循环），重连成功后清除 */
 	private readonly autoRestartAttempted = new Set<string>();
 	/**
-	 * 用户主动 abort 后正在等待 pi 确认的 agent。
+	 * 用户主动 abort 后正在等待 sd 确认的 agent。
 	 * abort() 先加入该集合，再发送 abort RPC；在收到 agent_settled 或下一个 agent_start 之前，
-	 * 丢弃 pi 发出的延迟流式事件（text_delta、thinking_delta 等），
+	 * 丢弃 sd 发出的延迟流式事件（text_delta、thinking_delta 等），
 	 * 防止管道中缓存的旧事件误重新激活 assistant 消息，造成“第一次点停止没停掉”的错觉。
 	 */
 	private readonly recentlyAborted = new Set<string>();
 
 	/**
 	 * 待处理的 Extension UI 请求。key 为 agentId，value 为 Map<requestId, { method, title, options }>。
-	 * 用于在 abort 时及时发送 cancellation 防止 pi 等待超时。
+	 * 用于在 abort 时及时发送 cancellation 防止 sd 等待超时。
 	 */
 	private readonly pendingUIRequests = new Map<string, Map<string, { method: string; title: string }>>();
 	/** abort 时正在等待 ask_question 响应的 agent，用于在工具结果中覆写 answer 为 null。 */
@@ -161,7 +161,7 @@ export class AgentManager {
 			: sessionPath;
 	}
 
-	/** Pi/RPC/session identity 在 WSL 模式下始终使用 Linux 逻辑路径。 */
+	/** Sd/RPC/session identity 在 WSL 模式下始终使用 Linux 逻辑路径。 */
 	private toSessionProtocolPath(sessionPath: string): string {
 		return this.wslEnvironment
 			? toWslLinuxPath(sessionPath, this.wslEnvironment)
@@ -175,8 +175,8 @@ export class AgentManager {
 	}
 
 	/**
-	 * 判断指定项目是否仍有运行中的 Agent（pi 子进程未退出）。
-	 * 用于删除项目前拦截，避免删除后 pi 进程悬挂后台继续占用资源。
+	 * 判断指定项目是否仍有运行中的 Agent（sd 子进程未退出）。
+	 * 用于删除项目前拦截，避免删除后 sd 进程悬挂后台继续占用资源。
 	 */
 	hasAgentForProject(projectId: string): boolean {
 		for (const runtime of this.agents.values()) {
@@ -190,7 +190,7 @@ export class AgentManager {
 	}
 
 	/**
-	 * 不启动 pi 进程，直接从 JSONL 构造与运行态相同的时间线数据。
+	 * 不启动 sd 进程，直接从 JSONL 构造与运行态相同的时间线数据。
 	 * Viewer 必须复用 AgentManager 的压缩归档与消息转换规则，避免维护第二套显示模型。
 	 */
 	async readSessionDisplayMessages(
@@ -231,7 +231,7 @@ export class AgentManager {
 		}
 		if (entries.length === 0) return [];
 
-		// JSONL 最后一个 entry 是 pi 当前叶节点；沿 parentId 回溯得到与 get_messages 一致的活动分支。
+		// JSONL 最后一个 entry 是 sd 当前叶节点；沿 parentId 回溯得到与 get_messages 一致的活动分支。
 		const byId = new Map(entries.map((entry) => [entry.id, entry]));
 		const activeBranch: typeof entries = [];
 		const seen = new Set<string>();
@@ -248,7 +248,7 @@ export class AgentManager {
 		const firstKeptIndex = lastCompaction?.firstKeptEntryId
 			? activeBranch.findIndex((entry) => entry.id === lastCompaction.firstKeptEntryId)
 			: -1;
-		// pi 压缩后上下文由 summary + firstKeptEntryId 起的保留消息 + 后续消息组成；
+		// sd 压缩后上下文由 summary + firstKeptEntryId 起的保留消息 + 后续消息组成；
 		// 不能只取 compaction entry 之后，否则会漏掉压缩时明确保留的尾部消息。
 		const currentStartIndex = firstKeptIndex >= 0
 			? firstKeptIndex
@@ -328,7 +328,7 @@ export class AgentManager {
 
 		const rawMessages = (response.data as { messages?: unknown[] } | undefined)?.messages ?? [];
 
-		// 解析 entryId 列表（需要先于 convertAgentMessages，用于把消息关联到 pi 的会话分支）。
+		// 解析 entryId 列表（需要先于 convertAgentMessages，用于把消息关联到 sd 的会话分支）。
 		let activeEntryIds: string[] | undefined;
 		if (entriesResult) {
 			const entriesData = entriesResult.data as
@@ -344,7 +344,7 @@ export class AgentManager {
 		const trimmed = this.trimHistoryMessages(rawMessages);
 
 		// 解析会话文件里的压缩记录：拿到所有压缩段摘要 + 归档消息。
-		// pi 的 get_messages 对压缩会话只返回压缩后的消息，通常不带压缩摘要；
+		// sd 的 get_messages 对压缩会话只返回压缩后的消息，通常不带压缩摘要；
 		// 这里从原始会话文件补回：压缩摘要卡片 + 归档消息（支持展开查看压缩前内容）。
 		// 若 RPC 已经返回了压缩/分支摘要，则不再重复补，避免时间线出现两张摘要卡片。
 		let compactionSummaryRaw: unknown | null = null;
@@ -393,7 +393,7 @@ export class AgentManager {
 						},
 					};
 				} else {
-					// RPC 已返回摘要 → 找到它并注入 archivedMessages（pi 的摘要不带归档消息）
+					// RPC 已返回摘要 → 找到它并注入 archivedMessages（sd 的摘要不带归档消息）
 					for (const msg of trimmed) {
 						const m = msg as Record<string, unknown>;
 						if (m.role === "compactionSummary") {
@@ -546,9 +546,9 @@ export class AgentManager {
 
 	/**
 	 * 从原始会话文件解析压缩（compaction）记录。
-	 * pi 的 get_messages 对压缩后的会话只返回压缩后的消息，不携带压缩摘要，
+	 * sd 的 get_messages 对压缩后的会话只返回压缩后的消息，不携带压缩摘要，
 	 * 因此桌面端直接从 JSONL 里扫描 type:="compaction" 和 type:="message" 条目，用于：
-	 *   1) 在时间线最前面补回"压缩摘要"卡片（与 pi 行为一致）；
+	 *   1) 在时间线最前面补回"压缩摘要"卡片（与 sd 行为一致）；
 	 *   2) 统计压缩次数，供前端展示"已压缩 N 次";
 	 *   3) 提取每个压缩段归档的消息，支持在时间线中展开查看压缩前内容。
 	 */
@@ -719,13 +719,15 @@ export class AgentManager {
 		};
 
 		const t1 = Date.now();
+		void this.appLogger?.info("agent", "Agent ensure trusted directory start", { agentId: id, cwd: project.path });
 		const trustOverride = await this.ensureProjectTrust(project);
+		void this.appLogger?.info("agent", "Agent ensure trusted directory completed", { agentId: id, cwd: project.path });
 		const t2 = Date.now();
 
-		void this.appLogger?.info("agent", "Agent pi process start", { agentId: id });
+		void this.appLogger?.info("agent", "Agent sd process start", { agentId: id });
 		const process = new SdProcess(project.path, this.settingsStore.get());
 		process.on("version-check", (payload) => {
-			void this.appLogger?.info("agent", "Pi version check completed", {
+			void this.appLogger?.info("agent", "Sd version check completed", {
 				agentId: id,
 				...(payload && typeof payload === "object" ? payload : {}),
 			});
@@ -738,7 +740,7 @@ export class AgentManager {
 		const client = await process.start(input.sessionPath, trustOverride, input.noSession);
 		const t3 = Date.now();
 		const diag = process.getDiagnostics();
-		void this.appLogger?.info("agent", "Pi process spawned", {
+		void this.appLogger?.info("agent", "Sdprocess spawned", {
 			agentId: id,
 			prepareMs: t1 - t0,
 			trustMs: t2 - t1,
@@ -749,7 +751,7 @@ export class AgentManager {
 		});
 
 		// 启动后先获取状态，get_messages 必须等状态就绪后再发送，
-		// 确保 pi 进程已完全加载会话文件，避免竞态导致返回空结果。
+		// 确保 sd 进程已完全加载会话文件，避免竞态导致返回空结果。
 		void this.appLogger?.info("agent", "Agent get_state request start", { agentId: id });
 		const statePromise = client.request({ type: "get_state" });
 		const historyLoadDecision = this.getHistoryAutoLoadDecision(input.sessionPath);
@@ -852,7 +854,7 @@ export class AgentManager {
 		process.on("error", (error) => {
 			tab.status = "error";
 			this.addMessage(id, "error", error.message);
-			this.appLogger?.error("agent", "Pi process error", {
+			this.appLogger?.error("agent", "Sdprocess error", {
 				agentId: id,
 				error: error instanceof Error ? error.message : String(error),
 			});
@@ -884,7 +886,7 @@ export class AgentManager {
 			// 因此历史消息后台加载，避免 40MB+ 会话把“打开 Agent”阻塞到十几秒。
 			// 同时插入一条临时系统消息，给用户明确的加载反馈，避免空白页面看起来像冻结。
 			// preserveMessagesAfter 保护加载期间用户新发的消息/流式回复，防止历史结果回写时覆盖当前会话。
-			// 状态就绪后发送 get_messages，确保 pi 进程已完全加载会话文件，避免竞态。
+			// 状态就绪后发送 get_messages，确保 sd 进程已完全加载会话文件，避免竞态。
 			const messagesPromise = historyLoadDecision.shouldLoad
 				? client.request({ type: "get_messages" })
 				: undefined;
@@ -981,10 +983,10 @@ export class AgentManager {
 					const snippet = stderrText.length > 600 ? "…" + stderrText.slice(-600) : stderrText;
 					lines.push(`进程错误输出:\n${snippet}`);
 				}
-				// pi 路径与版本检测
-				lines.push(`pi 路径: ${diag.command}`);
-				if (diag.customPiPath) {
-					lines.push(`自定义路径: ${diag.customPiPath}`);
+				// sd 路径与版本检测
+				lines.push(`sd 路径: ${diag.command}`);
+				if (diag.customSdPath) {
+					lines.push(`自定义路径: ${diag.customSdPath}`);
 				}
 				lines.push(`工作目录: ${diag.cwd}`);
 				lines.push(`版本检测: ${diag.versionCheck ? "✓ 通过" : "✗ 失败"}`);
@@ -993,22 +995,22 @@ export class AgentManager {
 				lines.push("");
 				lines.push("━━━ 排查步骤 ━━━");
 				if (!diag.versionCheck) {
-					lines.push("1. 在终端执行 pi --version，确认 pi 是否已安装且路径正确");
-					lines.push("2. 如未安装，执行 npm install -g @earendil-works/pi-coding-agent");
-					lines.push("3. 安装后再次在终端执行 pi --version 验证");
+					lines.push("1. 在终端执行 sd --version，确认 sd 是否已安装且路径正确");
+					lines.push("2. 如未安装，执行 npm install -g @snacode/sd-coding-agent");
+					lines.push("3. 安装后再次在终端执行 sd --version 验证");
 				} else if (diag.exitCode !== 0) {
-					lines.push("1. 在终端执行 pi --mode rpc 看是否能正常启动");
+					lines.push("1. 在终端执行 sd --mode rpc 看是否能正常启动");
 					lines.push("2. 注意终端中的错误信息，根据异常信息修复");
 				} else if (!stderrText && diag.exitCode === null) {
-					lines.push("1. pi 进程可能尚未完成初始化，可在设置页增加 RPC 超时时间");
+					lines.push("1. sd 进程可能尚未完成初始化，可在设置页增加 RPC 超时时间");
 				} else {
-					lines.push("1. 在终端执行 pi --mode rpc 确认 pi 能否正常启动");
-					lines.push("2. 检查设置中的 pi 路径是否正确");
+					lines.push("1. 在终端执行 sd --mode rpc 确认 sd 能否正常启动");
+					lines.push("2. 检查设置中的 sd 路径是否正确");
 				}
 				lines.push("");
 				lines.push("如问题持续，可在 GitHub 提交 Issue 并附上以上信息。");
 
-				enriched = `⚠️ Pi RPC 启动失败\n\n${rawMessage}\n\n${lines.join("\n")}`;
+				enriched = `⚠️ SD RPC 启动失败\n\n${rawMessage}\n\n${lines.join("\n")}`;
 			}
 			this.addMessage(id, "error", enriched);
 		}
@@ -1022,7 +1024,7 @@ export class AgentManager {
 		const trimmed = name.replace(/\s+/g, " ").trim();
 		if (!trimmed) throw new Error("Agent name cannot be empty");
 
-		// 会话名属于 pi 原生 session 元数据；通过 RPC 修改，避免 desktop 手写 JSONL 后与 pi 格式演进脱节。
+		// 会话名属于 sd 原生 session 元数据；通过 RPC 修改，避免 desktop 手写 JSONL 后与 sd 格式演进脱节。
 		const response = await runtime.process.client.request(
 			{ type: "set_session_name", name: trimmed },
 			20_000,
@@ -1055,7 +1057,7 @@ export class AgentManager {
 			return { accepted: false, error: "消息不能为空" };
 		}
 
-		// 解析 !/!! 前缀：与 pi 终端行为一致
+		// 解析 !/!! 前缀：与 sd 终端行为一致
 		// !command  → 执行命令并将输出发送给 LLM（excludeFromContext: false）
 		// !!command → 执行命令但不将输出发送给 LLM（excludeFromContext: true）
 		const isBashExcluded = trimmed.startsWith("!!");
@@ -1071,7 +1073,7 @@ export class AgentManager {
 		}
 
 		// 判断 agent 是否已在忙碌中；运行中继续发送时必须带 streamingBehavior，
-		// 否则 pi RPC 会拒绝请求。该值也用于给用户消息打上投递语义标记。
+		// 否则 sd RPC 会拒绝请求。该值也用于给用户消息打上投递语义标记。
 		const alreadyBusy = runtime.tab.status === "running";
 		const statusBeforePrompt = runtime.tab.status;
 		const promptDeliveryBehavior = input.streamingBehavior ?? (alreadyBusy ? "steer" : undefined);
@@ -1099,10 +1101,10 @@ export class AgentManager {
 			input.images,
 		);
 
-		// streamingBehavior 只在 agent 忙碌时需要；UI 可以显式传 steer/followUp 以复用 pi 队列语义。
+		// streamingBehavior 只在 agent 忙碌时需要；UI 可以显式传 steer/followUp 以复用 sd 队列语义。
 		// 当前端排队 flush 连续发送多条消息时，第一条会触发 agent_start 使 agent 变忙碌，
-		// 后续消息必须带 streamingBehavior 否则 pi 直接返回 error。这里自动兜底。
-		// images 用于传递粘贴/拖拽的图片，pi 会将 base64 图片直接传给支持视觉的模型。
+		// 后续消息必须带 streamingBehavior 否则 sd 直接返回 error。这里自动兜底。
+		// images 用于传递粘贴/拖拽的图片，sd 会将 base64 图片直接传给支持视觉的模型。
 		try {
 			const promptIsExtensionCommand = await this.promptMatchesRegisteredExtensionCommand(runtime, agentMessage);
 			const requestPayload: Record<string, unknown> = {
@@ -1122,7 +1124,7 @@ export class AgentManager {
 				this.settingsStore.get().rpcTimeout,
 			);
 			if (!response.success) {
-				// pi RPC 会把不支持图片、忙碌队列参数缺失等前置错误作为 success:false 返回；
+				// sd RPC 会把不支持图片、忙碌队列参数缺失等前置错误作为 success:false 返回；
 				// 必须显式显示出来，否则 UI 会停在"已发送但无响应"的状态。
 				const errorMessage = response.error ?? "图片消息发送失败";
 				runtime.tab.status = statusBeforePrompt === "running" ? "running" : "idle";
@@ -1132,17 +1134,17 @@ export class AgentManager {
 			}
 
 			if (promptIsExtensionCommand) {
-				// 机制：Pi 扩展命令可在 prompt 阶段直接执行并返回，不进入 agent run。
-				// 证据：@earendil-works/pi-coding-agent/dist/core/agent-session.js 中 AgentSession.prompt()
+				// 机制：Sd扩展命令可在 prompt 阶段直接执行并返回，不进入 agent run。
+				// 证据：@snacode/sd-coding-agent/dist/core/agent-session.js 中 AgentSession.prompt()
 				//      先调用 _tryExecuteExtensionCommand()；命中后 return，不再调用 _runAgentPrompt()。
-				// 推导：不能等 agent_end；只有 Pi get_state 明确报告无剩余工作时才恢复 idle。
+				// 推导：不能等 agent_end；只有 Sdget_state 明确报告无剩余工作时才恢复 idle。
 				this.scheduleIdleCheckAfterExtensionCommand(input.agentId);
 			}
 			return { accepted: true };
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			// prompt RPC 调用前已通过同步 write() 写入 pi stdin；此处所有异常都只说明
-			// preflight 响应未到达，无法证明 pi 没有接收。返回 unknown，renderer 会永久禁用
+			// prompt RPC 调用前已通过同步 write() 写入 sd stdin；此处所有异常都只说明
+			// preflight 响应未到达，无法证明 sd 没有接收。返回 unknown，renderer 会永久禁用
 			// 该快照的重试/编辑/取消，防止用户把同一条消息提交两次。
 			runtime.tab.status = statusBeforePrompt === "running" ? "running" : "error";
 			this.addMessage(
@@ -1156,7 +1158,7 @@ export class AgentManager {
 	}
 
 	/**
-	 * 执行 bash 命令并通过 tool 消息展示输出，行为与 pi 终端的 !/!! 前缀一致。
+	 * 执行 bash 命令并通过 tool 消息展示输出，行为与 sd 终端的 !/!! 前缀一致。
 	 * excludeFromContext 控制输出是否作为上下文发送给 LLM。
 	 */
 	private async executeBashCommand(
@@ -1216,7 +1218,7 @@ export class AgentManager {
 			if (cancelled) {
 				this.addMessage(agentId, "system", "命令已取消");
 			} else {
-				// 以 tool 消息展示命令输出，与 pi 终端的 bash 结果展示保持一致
+				// 以 tool 消息展示命令输出，与 sd 终端的 bash 结果展示保持一致
 				const toolMessage = formatBashToolMessage({
 					command,
 					output,
@@ -1245,12 +1247,76 @@ export class AgentManager {
 		}
 	}
 
+	/**
+	 * 直接调用 MCP 工具（跳过 LLM，直接执行工具）。
+	 * 通过 sd RPC 的 tool_request 类型实现，允许用户手动触发工具执行。
+	 */
+	async invokeTool(agentId: string, toolName: string, args: Record<string, unknown>): Promise<{ success: boolean; error?: string; result?: unknown }> {
+		const runtime = this.requireRuntime(agentId);
+		
+		if (!runtime.process.isRunning()) {
+			return { success: false, error: "Agent 进程已停止，请重启 Agent 后重试" };
+		}
+
+		try {
+			const response = await runtime.process.client.request(
+				{
+					type: "tool_request",
+					toolName,
+					arguments: args,
+				},
+				this.settingsStore.get().rpcTimeout,
+			);
+
+			if (!response.success) {
+				return { success: false, error: response.error ?? "工具调用失败" };
+			}
+
+			return { success: true, result: response.data };
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			return { success: false, error: errorMessage };
+		}
+	}
+
+	/**
+	 * 直接执行 Skill（跳过 LLM，直接执行指定 skill）。
+	 * 通过 sd RPC 的 skill_request 类型实现，允许用户手动触发 skill 执行。
+	 */
+	async invokeSkill(agentId: string, skillName: string, args?: Record<string, unknown>): Promise<{ success: boolean; error?: string; result?: unknown }> {
+		const runtime = this.requireRuntime(agentId);
+		
+		if (!runtime.process.isRunning()) {
+			return { success: false, error: "Agent 进程已停止，请重启 Agent 后重试" };
+		}
+
+		try {
+			const response = await runtime.process.client.request(
+				{
+					type: "skill_request",
+					skillName,
+					arguments: args ?? {},
+				},
+				this.settingsStore.get().rpcTimeout,
+			);
+
+			if (!response.success) {
+				return { success: false, error: response.error ?? "Skill 执行失败" };
+			}
+
+			return { success: true, result: response.data };
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			return { success: false, error: errorMessage };
+		}
+	}
+
 	async abort(agentId: string) {
 		const runtime = this.requireRuntime(agentId);
 
-		// pi 在等待 extension_ui_response 时（如 ask_question），不发 abort 也能处理，
-		// 但必须解除 pending 请求的阻塞，否则 pi 不会继续读取 stdin 中的后续命令。
-		// 发 cancelled: true 会导致 pi 返回 undefined，ask_question 工具默认选第一个；
+		// sd 在等待 extension_ui_response 时（如 ask_question），不发 abort 也能处理，
+		// 但必须解除 pending 请求的阻塞，否则 sd 不会继续读取 stdin 中的后续命令。
+		// 发 cancelled: true 会导致 sd 返回 undefined，ask_question 工具默认选第一个；
 		// 改发 value: null（不带 cancelled 标记），select parser 返回 null，
 		// 工具 result 的 answer = null，answered 为 false → 卡片显示"已取消"。
 		const pending = this.pendingUIRequests.get(agentId);
@@ -1296,7 +1362,7 @@ export class AgentManager {
 			}
 			this.pendingUIRequests.delete(agentId);
 		}
-		// abort 时必须清除所有流式状态，防止后续 pi 的延迟事件（text_delta、thinking_delta、tool_execution_* 等）
+		// abort 时必须清除所有流式状态，防止后续 sd 的延迟事件（text_delta、thinking_delta、tool_execution_* 等）
 		// 修改上次会话的旧消息，导致新会话消息混入被中止的旧输出。
 		this.activeAssistantMessageIds.delete(agentId);
 		this.streamingThinking.delete(agentId);
@@ -1311,11 +1377,11 @@ export class AgentManager {
 	}
 
 	/**
-	 * 手动触发上下文压缩。pi 会将历史消息摘要化以释放 context 空间，
+	 * 手动触发上下文压缩。sd 会将历史消息摘要化以释放 context 空间，
 	 * 适用于长时间对话后 context 占比过高、但不想丢失关键信息的场景。
 	 *
-	 * 注意：pi 在压缩完成后可能会自动重启进程（尤其早期版本），此时 RPC 请求会因
-	 * "pi exited" 错误而失败。本方法检测到进程退出后会自动重连同一会话并加载消息，
+	 * 注意：sd 在压缩完成后可能会自动重启进程（尤其早期版本），此时 RPC 请求会因
+	 * "sd exited" 错误而失败。本方法检测到进程退出后会自动重连同一会话并加载消息，
 	 * 因此调用方不应把 RPC 失败等同于压缩失败。
 	 */
 	async compact(agentId: string, prompt?: string) {
@@ -1344,7 +1410,7 @@ export class AgentManager {
 				rpcError: response.error,
 			});
 
-			// 检查 RPC 返回的 success 字段：pi CLI 可能压缩成功但后续步骤抛异常，
+			// 检查 RPC 返回的 success 字段：sd CLI 可能压缩成功但后续步骤抛异常，
 			// 此时 session 文件已写入但 RPC 仍返回错误。
 			if (!response.success) {
 				void this.appLogger?.warn("agent", "Compact RPC returned failure (session might still be written)", {
@@ -1373,7 +1439,7 @@ export class AgentManager {
 
 			this.compactingAgents.delete(agentId);
 
-			// 如果进程在压缩期间退出（pi 压缩后自动重启进程的行为），
+			// 如果进程在压缩期间退出（sd 压缩后自动重启进程的行为），
 			// RPC 请求会因连接断开而失败，但压缩实际已完成。
 			// 尝试重连同一会话，不从 compact() 层面抛出错误。
 			if (!processAlive && runtime.tab.sessionPath) {
@@ -1399,11 +1465,11 @@ export class AgentManager {
 	}
 
 	/**
-	 * 进程退出后重新附加到同一会话：创建新的 PiProcess 并替换旧的进程引用。
-	 * 在压缩导致 pi 进程自动重启后调用，保持同一 agentId 可继续对话。
+	 * 进程退出后重新附加到同一会话：创建新的 SdProcess 并替换旧的进程引用。
+	 * 在压缩导致 sd 进程自动重启后调用，保持同一 agentId 可继续对话。
 	 *
 	 * 与 create() 中创建过程的区别：不重新分配 agentId、不解绑项目，
-	 * 只替换底层的 pi 进程和 RPC 客户端，保留所有消息和 tab 状态。
+	 * 只替换底层的 sd 进程和 RPC 客户端，保留所有消息和 tab 状态。
 	 */
 	private async reattachProcess(agentId: string, sessionPath: string): Promise<void> {
 		const runtime = this.agents.get(agentId);
@@ -1420,7 +1486,7 @@ export class AgentManager {
 		const process = new SdProcess(project.path, this.settingsStore.get());
 		const client = await process.start(sessionPath);
 		const restartDiag = process.getDiagnostics();
-		void this.appLogger?.info("agent", "Pi process restarted", {
+		void this.appLogger?.info("agent", "Sdprocess restarted", {
 			agentId,
 			command: restartDiag?.command,
 			args: restartDiag?.args?.join(' '),
@@ -1515,7 +1581,7 @@ export class AgentManager {
 			runtime.tab.sessionPath = data?.sessionFile ?? sessionPath;
 			runtime.tab.title = data?.sessionName ?? runtime.tab.title;
 			runtime.tab.status = "idle";
-			// 进程退出型压缩可能来不及发 compaction_end；重连成功即表示 Pi 已可继续接收消息。
+			// 进程退出型压缩可能来不及发 compaction_end；重连成功即表示 Sd已可继续接收消息。
 			this.rpcCompactingAgents.delete(agentId);
 
 			// 重连成功后清除自动重连标记，允许下一次再触发
@@ -1540,7 +1606,7 @@ export class AgentManager {
 
 	/**
 	 * 读取 session 文件，提取最后一条 assistant 消息的缓存命中率。
-	 * 与 pi CLI footer 的 latestCacheHitRate 逻辑一致：
+	 * 与 sd CLI footer 的 latestCacheHitRate 逻辑一致：
 	 * latestCacheHitRate = cacheRead / (input + cacheRead + cacheWrite) * 100
 	 */
 	private async getLatestCacheMessageHitRate(sessionPath: string): Promise<number | undefined> {
@@ -1623,8 +1689,8 @@ export class AgentManager {
 			stats?.cacheHitRate != null ? stats.cacheHitRate * 100 : undefined,
 		);
 	/**
-	 * 使用最新一条 assistant 消息的缓存命中率，与 pi CLI footer 保持一致。
-	 * pi 的 get_session_stats RPC 不直接返回 cacheHitPercent，需读取 session 文件。
+	 * 使用最新一条 assistant 消息的缓存命中率，与 sd CLI footer 保持一致。
+	 * sd 的 get_session_stats RPC 不直接返回 cacheHitPercent，需读取 session 文件。
 	 */
 		const computedCacheHitPercent = runtime.tab.sessionPath
 			? await this.getLatestCacheMessageHitRate(runtime.tab.sessionPath)
@@ -1642,7 +1708,7 @@ export class AgentManager {
 				state?.isCompacting ||
 				this.rpcCompactingAgents.has(agentId) ||
 				this.compactingAgents.has(agentId),
-			/** 工具执行状态从本地追踪，无需 Pi 进程查询 */
+			/** 工具执行状态从本地追踪，无需 Sd进程查询 */
 			isExecutingTool: !!(this.toolExecutingByAgent.get(agentId)),
 			executingToolName: this.toolExecutingByAgent.get(agentId) ?? undefined,
 			toolStateSequence: this.toolStateSequenceByAgent.get(agentId) ?? 0,
@@ -1685,7 +1751,7 @@ export class AgentManager {
 	) {
 		const toolStateSequence = (this.toolStateSequenceByAgent.get(agentId) ?? 0) + 1;
 		this.toolStateSequenceByAgent.set(agentId, toolStateSequence);
-		// 工具边沿直接从原始 pi 事件发出，不等待 get_state/get_session_stats。
+		// 工具边沿直接从原始 sd 事件发出，不等待 get_state/get_session_stats。
 		// 这样即使工具极快完成或完整状态请求乱序，renderer 仍能稳定看到 true → false。
 		this.emit(ipcChannels.agentsRuntimeState, {
 			agentId,
@@ -1771,12 +1837,12 @@ export class AgentManager {
 	 * 刷新模型配置：让运行中的 agent 重新加载 models.json，无需完全重启。
 	 *
 	 * 当前仅支持轻量级 reload_config RPC（策略 1）。
-	 * 策略 2（进程重启）已注释，等待 pi 官方支持 reload_config RPC 后再考虑：
+	 * 策略 2（进程重启）已注释，等待 sd 官方支持 reload_config RPC 后再考虑：
 	 *   - 运行中的 Agent 重启进程会打断正在进行的对话/工具执行
 	 *   - 进程重启涉及 exit 事件竞态、模型恢复等复杂边界条件
 	 *
-	 * RPC 提案：https://github.com/earendil-works/pi/issues/6890
-	 * pi 合并 reload_config 后，本方法将自动生效，无需任何修改。
+	 * RPC 提案：https://github.com/earendil-works/sd/issues/6890
+	 * sd 合并 reload_config 后，本方法将自动生效，无需任何修改。
 	 */
 	async refreshModels(agentId: string): Promise<AgentRuntimeState> {
 		const runtime = this.requireRuntime(agentId);
@@ -1785,9 +1851,9 @@ export class AgentManager {
 		void this.appLogger?.info("agent", "Model refresh requested", { agentId });
 
 		// 策略 1：尝试 reload_config RPC（轻量级，无需重启进程）
-		// 该命令在 pi model-runtime 中已实现为 reloadConfig()，会重新读取 models.json
-		// 并重建所有 provider。当前 pi 0.80.10 的 RPC 协议尚未暴露此命令，
-		// 待 pi 合并 https://github.com/earendil-works/pi/issues/6890 后自动生效。
+		// 该命令在 sd model-runtime 中已实现为 reloadConfig()，会重新读取 models.json
+		// 并重建所有 provider。当前 sd 0.80.10 的 RPC 协议尚未暴露此命令，
+		// 待 sd 合并 https://github.com/earendil-works/sd/issues/6890 后自动生效。
 		try {
 			const response = await runtime.process.client.request(
 				{ type: "reload_config" },
@@ -1803,12 +1869,12 @@ export class AgentManager {
 				return this.getRuntimeState(agentId);
 			}
 		} catch {
-			// reload_config 尚不支持，当前 pi 版本无轻量级刷新路径
+			// reload_config 尚不支持，当前 sd 版本无轻量级刷新路径
 		}
 
 		// 策略 2（已注释）：进程重启方案。
 		// 原因：运行中重启会打断用户对话、工具执行，且涉及 exit 事件竞态。
-		// 等 pi 官方支持 reload_config RPC 后，策略 1 自动生效，无需回退到策略 2。
+		// 等 sd 官方支持 reload_config RPC 后，策略 1 自动生效，无需回退到策略 2。
 		//
 		// const sessionPath = runtime.tab.sessionPath;
 		// if (!sessionPath) {
@@ -1829,7 +1895,7 @@ export class AgentManager {
 		// 	this.modelRefreshingAgents.delete(agentId);
 		// }
 
-		void this.appLogger?.info("agent", "Model refresh: reload_config not supported by current pi version, skipping", {
+		void this.appLogger?.info("agent", "Model refresh: reload_config not supported by current sd version, skipping", {
 			agentId,
 			elapsedMs: Date.now() - startTime,
 		});
@@ -1856,12 +1922,12 @@ export class AgentManager {
 	}
 
 	/**
-	 * 使用 pi �� switch_session RPC ���ص�ǰ�Ự���������½��̡�
-	 * ���̣��༭ JSONL → �ĵ�һ�� JSON ������ _reloadMarker �ֶ� → switch_session
-	 * → pi ���ֵ�һ�����ݱ仯→������Ч→���¶�ȡ → �Ƴ� _reloadMarker �ֶΡ�
+	 * 使用 sd 的 switch_session RPC 通知当前会话重新加载进程。
+	 * 流程：编辑 JSONL → 在第一行 JSON 中加入 _reloadMarker 字段 → switch_session
+	 * → sd 检测到数据变化 → 缓存失效 → 重新读取 → 移除 _reloadMarker 字段。
 	 *
-	 * ��ȣ��ɷ������б�ǩ�У����� _reloadMarker ��Ϊ�ֶ�д���һ�е� JSON �У�
-	 * ���ı��ļ��нṹ������ marker δ��������ļ���Ȼ�ǺϷỰ���ɱ� pi ������
+	 * 注意：把 _reloadMarker 作为字段写入第一行的 JSON 中，
+	 * 这样即使文件结构变化，只要 marker 被移除，文件仍然是合法会话，可被 sd 正常读取。
 	 */
 	private async reloadSession(agentId: string) {
 		const startTime = Date.now();
@@ -1879,8 +1945,8 @@ export class AgentManager {
 			if (lines.length === 0 || !lines[0].trim()) {
 				throw new Error("Session file is empty");
 			}
-			// �ĵ�һ�� JSON ���󣬼��� _reloadMarker �ֶΣ����� pi ���·������Ļ��档
-			// ֻ�ĵ�һ�е����ݣ����ı��нṹ��ʹ marker ���������ļ���Ȼ�ǺϷỰ��
+			// 修改第一行 JSON 对象，加入 _reloadMarker 字段，触发 sd 重新加载该会话。
+			// 只修改第一行的数据，不改变文件结构，使 marker 只影响首行，文件仍然是合法会话。
 			const firstLine = JSON.parse(lines[0]) as Record<string, unknown>;
 			delete firstLine._reloadMarker; // 先清除旧的，确保值不同
 			firstLine._reloadMarker = markerId;
@@ -1905,7 +1971,7 @@ export class AgentManager {
 				elapsedMs: Date.now() - startTime,
 			});
 
-			// �ָ���һ�У��Ƴ� _reloadMarker �ֶΣ������ļ���ԭʼ״̬
+			// 恢复第一行，移除 _reloadMarker 字段，让文件回到原始状态。
 			try {
 				const afterRaw = await readFile(sessionHostPath, "utf8");
 				const afterLines = afterRaw.split(/\r?\n/);
@@ -1916,7 +1982,7 @@ export class AgentManager {
 					await writeFile(sessionHostPath, afterLines.join("\n"), "utf8");
 				}
 			} catch {
-				// _reloadMarker �ֶ����� residue ���ᵼ�� pi ���Է�����������Ӱ���Ựʹ��
+				// _reloadMarker 字段残留可能导致 sd 无法正确读取会话，所以必须清理。
 			}
 
 			if (!response.success) {
@@ -2023,7 +2089,7 @@ export class AgentManager {
 	/**
 	 * 检查 Agent 是否处于可编辑/可删除的安全状态。
 	 * 要求：isStreaming === false && isCompacting !== true && tab.status !== "running"
-	 * 编辑/删除操作依赖 pi RPC 的 switch_session，在 busy 状态下行为不确定。
+	 * 编辑/删除操作依赖 sd RPC 的 switch_session，在 busy 状态下行为不确定。
 	 */
 	private async ensureAgentIdle(agentId: string): Promise<void> {
 		const runtime = this.agents.get(agentId);
@@ -2161,7 +2227,7 @@ export class AgentManager {
 	 * 2. 通过 meta.entryId 精确定位 JSONL 行（回退：msg.id 提取 entryId / 角色+文本匹配）
 	 * 3. 修改对应行的 text 内容
 	 * 4. 写回 JSONL
-	 * 5. 使用 _reloadMarker 方案让 pi 重新加载会话
+	 * 5. 使用 _reloadMarker 方案让 sd 重新加载会话
 	 */
 	async editMessage(agentId: string, messageId: string, newText: string) {
 		const startTime = Date.now();
@@ -2214,9 +2280,9 @@ export class AgentManager {
 			lines[lineIndex] = JSON.stringify(entry);
 			await writeFile(sessionHostPath, lines.join("\n"), "utf8");
 
-			// 5. 使用 _reloadMarker 重载 pi 会话
+			// 5. 使用 _reloadMarker 重载 sd 会话
 			// 注意：不再手动更新桌面端内存——reloadSession 内部调用 loadMessages
-			// 会从 pi 拉取最新消息列表，保持桌面端与 pi 状态一致。
+			// 会从 sd 拉取最新消息列表，保持桌面端与 sd 状态一致。
 			try {
 				await this.reloadSession(agentId);
 			} catch (error) {
@@ -2258,7 +2324,7 @@ export class AgentManager {
 	 * 相比旧版本（置空行导致 JSONL 行数偏移），本方案：
 	 * - 用 {"type":"deleted","originalEntryId":"...","ts":...} 替换原行
 	 * - 同时将删掉 entry 的子 entry 的 parentId 重定向到被删 entry 的父节点（re-parenting），
-	 *   确保 pi 重载 session tree 时不会因 dangling parentId 丢弃整个子分支
+	 *   确保 sd 重载 session tree 时不会因 dangling parentId 丢弃整个子分支
 	 * - 保留行号稳定，不破坏行数对齐
 	 * - entryId 精确定位不受之前删除操作影响
 	 */
@@ -2295,8 +2361,8 @@ export class AgentManager {
 			await this.backupSessionFile(sessionPath);
 
 			// 3. Re-parenting：将删掉 entry 的所有直接子节点的 parentId 指向被删 entry 的父节点。
-			// 这样 pi 在 switch_session 重载 session tree 时，子节点不会因为
-			// 父节点消失而变成 dangling orphan，避免 pi 丢弃整个子分支（“删一条丢多条”）。
+			// 这样 sd 在 switch_session 重载 session tree 时，子节点不会因为
+			// 父节点消失而变成 dangling orphan，避免 sd 丢弃整个子分支（“删一条丢多条”）。
 			if (deletedEntryId && deletedParentId !== undefined) {
 				for (let i = 0; i < lines.length; i++) {
 					if (i === lineIndex) continue;
@@ -2313,7 +2379,7 @@ export class AgentManager {
 			}
 
 			// 4. 用 deleted 标记替换原行（不保留 id 字段，
-			// 避免 pi 的 get_entries 返回已删 entry 导致 activeEntryIds 与 messages 不匹配）
+			// 避免 sd 的 get_entries 返回已删 entry 导致 activeEntryIds 与 messages 不匹配）
 			lines[lineIndex] = JSON.stringify({
 				type: "deleted",
 				originalEntryId: deletedEntryId ?? `unknown-${messageId}`,
@@ -2321,9 +2387,9 @@ export class AgentManager {
 			});
 			await writeFile(sessionHostPath, lines.join("\n"), "utf8");
 
-			// 5. 使用 _reloadMarker 重载 pi 会话
+			// 5. 使用 _reloadMarker 重载 sd 会话
 			// 不再手动更新 desktop 内存——reloadSession 内部调用 loadMessages
-			// 从 pi 拉取最新消息列表
+			// 从 sd 拉取最新消息列表
 			try {
 				await this.reloadSession(agentId);
 			} catch (error) {
@@ -2441,7 +2507,7 @@ export class AgentManager {
 			await this.backupSessionFile(sessionPath);
 
 			// 只删该用户消息条目本身；它的直系子节点（若有）通过 re-parenting 指向父节点，
-			// 避免 orphan 导致 pi 丢弃整个后代分支。
+			// 避免 orphan 导致 sd 丢弃整个后代分支。
 			// 这样之前的 assistant 回复内容得以保留，重发后看起来就像原地替换了失败消息。
 			if (rootEntryId && rootParentId !== undefined) {
 				for (let i = 0; i < lines.length; i++) {
@@ -2516,15 +2582,15 @@ export class AgentManager {
 	}
 
 	/**
-	 * 重启 agent 进程：停止当前 pi RPC 子进程，用同一个 session 重新启动。
-	 * 适用场景：修改了 provider 配置、切换了 API key、更新了 pi 版本后，
+	 * 重启 agent 进程：停止当前 sd RPC 子进程，用同一个 session 重新启动。
+	 * 适用场景：修改了 provider 配置、切换了 API key、更新了 sd 版本后，
 	 * /reload 只重载 extension，不会重新读取配置文件，restart 才能生效。
 	 */
 	async restart(agentId: string): Promise<AgentTab> {
 		const runtime = this.requireRuntime(agentId);
 		const { projectId, title } = runtime.tab;
 
-		// 优先从 pi 获取最新 sessionFile，兜底用 tab 上缓存的值；
+		// 优先从 sd 获取最新 sessionFile，兜底用 tab 上缓存的值；
 		// 避免首次创建时未指定 session 路径、restart 后丢失历史的情况。
 		let sessionPath = runtime.tab.sessionPath;
 		if (!sessionPath) {
@@ -2564,7 +2630,7 @@ export class AgentManager {
 
 	/**
 	 * 对未打开的历史会话执行官方 RPC 导出。
-	 * 使用临时 pi 进程可以复用官方 export_html 样式，同时不切换当前桌面 Agent。
+	 * 使用临时 sd 进程可以复用官方 export_html 样式，同时不切换当前桌面 Agent。
 	 */
 	async exportSessionHtml(projectId: string, sessionPath: string) {
 		return this.withTemporarySession(projectId, sessionPath, async (process) => {
@@ -2734,7 +2800,7 @@ export class AgentManager {
 	}
 
 	stopAll() {
-		// 应用退出时统一清理所有 pi 子进程，避免后台 agent 残留占用模型或文件句柄。
+		// 应用退出时统一清理所有 sd 子进程，避免后台 agent 残留占用模型或文件句柄。
 		for (const runtime of this.agents.values()) {
 			this.userInitiatedStop.add(runtime.tab.id);
 			runtime.process.stop();
@@ -2755,7 +2821,7 @@ export class AgentManager {
 		const typed = event as Record<string, any>;
 		const runtime = this.agents.get(agentId);
 
-		// 扩展/RPC 调用 setSessionName 后 Pi 会发 session_info_changed；
+		// 扩展/RPC 调用 setSessionName 后 Sd会发 session_info_changed；
 		// 同步到 tab.title，使侧边栏与手动 rename 路径看到同一标题。
 		// 忽略空 name，避免把已有标题抹掉。
 		if (typed.type === "session_info_changed" && runtime) {
@@ -2782,7 +2848,7 @@ export class AgentManager {
 		}
 
 		if (typed.type === "message_start" && typed.message?.role === "assistant") {
-			// abort 后 pi 管道中缓存的 assistant 事件应丢弃，防止误重新激活流式状态。
+			// abort 后 sd 管道中缓存的 assistant 事件应丢弃，防止误重新激活流式状态。
 			if (this.recentlyAborted.has(agentId) && !this.activeAssistantMessageIds.has(agentId)) {
 				return;
 			}
@@ -2794,7 +2860,7 @@ export class AgentManager {
 			this.upsertRetryStatusMessage(agentId, typed, "running");
 			// 用户已主动中止时不重新激活 running 状态，避免 abort 后 auto-retry 事件误覆盖 state
 			if (runtime && !this.recentlyAborted.has(agentId)) {
-				// pi 在等待指数退避期间可能短暂结束一轮 agent run；桌面端保持 running，
+				// sd 在等待指数退避期间可能短暂结束一轮 agent run；桌面端保持 running，
 				// 让用户明确知道当前不是最终失败，而是在等待下一次自动重试。
 				runtime.tab.status = "running";
 				this.emitState();
@@ -2817,13 +2883,13 @@ export class AgentManager {
 			}
 		}
 
-		// 自动/手动压缩事件（pi 在自动或手动压缩完成后会发出这些事件），
+		// 自动/手动压缩事件（sd 在自动或手动压缩完成后会发出这些事件），
 		// 用于记录压缩耗时和结果，便于排查压缩性能问题。
 		if (typed.type === "compaction_start") {
 			this.rpcCompactingAgents.add(agentId);
 			// 用户已主动中止或出错时不重新激活 running 状态
 			if (runtime && !this.recentlyAborted.has(agentId) && runtime.tab.status !== "error") {
-				// 自动压缩在 agent_end 之后触发：Pi 仍在改写上下文，但不会再发 agent_start。
+				// 自动压缩在 agent_end 之后触发：Sd仍在改写上下文，但不会再发 agent_start。
 				// 因此桌面端必须主动保持 running，阻止用户误以为空闲并继续发送消息。
 				runtime.tab.status = "running";
 				this.emitState();
@@ -2842,7 +2908,7 @@ export class AgentManager {
 				void this.loadMessages(agentId).catch(() => undefined);
 				// 用户已主动中止或出错时不重新激活 running 状态
 				if (!this.recentlyAborted.has(agentId) && runtime.tab.status !== "error") {
-					// compaction_end 之后 Pi 仍可能因 overflow retry 或 queued follow-up 自动继续。
+					// compaction_end 之后 Sd仍可能因 overflow retry 或 queued follow-up 自动继续。
 					// 只有 agent_settled 才表示不会再自动发起下一轮，不能在这里提前 idle。
 					runtime.tab.status = "running";
 				}
@@ -2860,14 +2926,14 @@ export class AgentManager {
 		}
 
 		if (typed.type === "agent_end") {
-			// agent_end 只表示一次底层 run 结束；Pi 之后仍可能执行自动重试、自动压缩，
+			// agent_end 只表示一次底层 run 结束；Sd之后仍可能执行自动重试、自动压缩，
 			// 或压缩后继续 queued follow-up。最终空闲必须等 agent_settled，避免中途误判 idle。
 			if (runtime) {
 				this.activeAssistantMessageIds.delete(agentId);
 				this.toolMessageIds.delete(agentId);
 			}
 			// agent 异常结束时（如 API 返回 400、模型报错等），将错误提示写入会话，避免用户看到空白。
-			// 错误信息的存放位置因 pi 版本和错误类型不同而有多种可能：
+			// 错误信息的存放位置因 sd 版本和错误类型不同而有多种可能：
 			//   1. agent_end 顶层 errorMessage
 			//   2. messages 数组中 stopReason=error 的消息的 errorMessage
 			//   3. messages 数组中 assistant 消息的 content 里包含 error 片段
@@ -2895,7 +2961,7 @@ export class AgentManager {
 					? contentError.message
 					: undefined);
 			if (typed.willRetry === true) {
-				// agent_end.willRetry 表示 pi 已判定本次错误会进入自动重试；
+				// agent_end.willRetry 表示 sd 已判定本次错误会进入自动重试；
 				// 此时不写入最终错误，避免用户误以为会话已经失败。
 				if (errorMsg && !this.retryStatusMessageIds.has(agentId)) {
 					this.upsertRetryStatusMessage(
@@ -2929,7 +2995,7 @@ export class AgentManager {
 			// 但不要把它当作最终空闲信号，最终状态由 agent_settled 处理。
 			void this.emitRuntimeState(agentId);
 
-			// 兜底：如果 Pi 由于某些边缘情况未发送 agent_settled，
+			// 兜底：如果 Sd由于某些边缘情况未发送 agent_settled，
 			// 定时查询 get_state 确认是否已无工作可做，避免 UI 动画永久卡住。
 			// agent_settled 正常触发时 markIdleIfPiReportsNoWork 会因 status!=="running" 提前返回。
 			const settledTimer = setTimeout(() => {
@@ -2939,10 +3005,10 @@ export class AgentManager {
 		}
 
 		if (typed.type === "agent_settled") {
-			// agent_settled 是 Pi 的最终稳定点，清理最近中止标记，确保后续新消息不受影响。
+			// agent_settled 是 Sd的最终稳定点，清理最近中止标记，确保后续新消息不受影响。
 			this.recentlyAborted.delete(agentId);
 			if (runtime && runtime.tab.status !== "error" && runtime.tab.status !== "closed") {
-				// agent_settled 是 Pi 的最终稳定点：没有自动重试、自动压缩、压缩 retry
+				// agent_settled 是 Sd的最终稳定点：没有自动重试、自动压缩、压缩 retry
 				// 或 queued follow-up 会继续执行，此时才允许恢复 idle 并通知用户完成。
 				runtime.tab.status = "idle";
 				this.streamingThinking.delete(agentId);
@@ -2967,7 +3033,7 @@ export class AgentManager {
 			typed.type === "message_update" &&
 			typed.assistantMessageEvent
 		) {
-			// abort 后 pi 管道的延迟事件（text_delta、thinking_delta 等）不应继续更新 UI。
+			// abort 后 sd 管道的延迟事件（text_delta、thinking_delta 等）不应继续更新 UI。
 			if (this.recentlyAborted.has(agentId) && !this.activeAssistantMessageIds.has(agentId)) {
 				return;
 			}
@@ -2986,7 +3052,7 @@ export class AgentManager {
 		}
 
 		if (typed.type === "tool_execution_start") {
-			// abort 后 pi 管道的延迟工具事件应丢弃，避免重新激活流式状态。
+			// abort 后 sd 管道的延迟工具事件应丢弃，避免重新激活流式状态。
 			if (this.recentlyAborted.has(agentId) && !this.activeToolCallsByAgent.has(agentId)) {
 				return;
 			}
@@ -3009,7 +3075,7 @@ export class AgentManager {
 		}
 
 		if (typed.type === "tool_execution_end") {
-			// abort 后 pi 管道的延迟工具事件应丢弃。
+			// abort 后 sd 管道的延迟工具事件应丢弃。
 			if (this.recentlyAborted.has(agentId) && !this.activeToolCallsByAgent.has(agentId)) {
 				return;
 			}
@@ -3021,7 +3087,7 @@ export class AgentManager {
 			// 工具执行结束是终态，立即 flush 把最终结果推给渲染进程，避免节流窗口内用户看不到完成状态。
 			this.flushMessageEmit(agentId);
 			// 清除本次 toolCall；并行批次仅在最后一个工具结束时发布 false，
-			// 否则 steer 会在其他工具仍运行时过早进入 pi 队列。
+			// 否则 steer 会在其他工具仍运行时过早进入 sd 队列。
 			const activeToolCalls = this.activeToolCallsByAgent.get(agentId) ?? new Map<string, string>();
 			const toolState = updateActiveToolCalls(activeToolCalls, {
 				type: "end",
@@ -3039,7 +3105,7 @@ export class AgentManager {
 		}
 
 		if (typed.type === "tool_execution_update") {
-			// abort 后 pi 管道的延迟工具事件应丢弃。
+			// abort 后 sd 管道的延迟工具事件应丢弃。
 			if (this.recentlyAborted.has(agentId) && !this.activeToolCallsByAgent.has(agentId)) {
 				return;
 			}
@@ -3060,13 +3126,13 @@ export class AgentManager {
 	}
 
 	/**
-	 * 处理 pi 扩展发起的 UI 请求。
+	 * 处理 sd 扩展发起的 UI 请求。
 	 * 对话类请求写入消息流等待用户回答；fire-and-forget 请求只转发给渲染进程或忽略。
 	 */
 	private handleUIRequest(agentId: string, typed: Record<string, any>) {
 		const method = String(typed.method ?? "");
 		const requestId = String(typed.id ?? "");
-		// pi RPC 协议将 setWidget / dialog 字段放在顶层，不嵌套 params
+		// sd RPC 协议将 setWidget / dialog 字段放在顶层，不嵌套 params
 		if (method === "notify") {
 			this.emit(ipcChannels.agentsUiRequest, {
 				agentId,
@@ -3143,21 +3209,21 @@ export class AgentManager {
 	}
 
 	/**
-	 * 发送 Extension UI 响应（extension_ui_response）到 pi 的 stdin。
+	 * 发送 Extension UI 响应（extension_ui_response）到 sd 的 stdin。
 	 * 同时更新对应卡片消息的状态。
 	 */
 	sendUIResponse(agentId: string, requestId: string, response: { value?: string | boolean; cancelled?: boolean; confirmed?: boolean }) {
 		const runtime = this.agents.get(agentId);
 		if (!runtime) return;
 
-		// 写入 extension_ui_response 到 pi 的 stdin
+		// 写入 extension_ui_response 到 sd 的 stdin
 
 		const extPayload: Record<string, unknown> = {
 			type: "extension_ui_response",
 			id: requestId,
 			value: response.value,
 		};
-		// pi 的 ctx.ui.confirm() 检查 confirmed 字段，ctx.ui.select/input 检查 value
+		// sd 的 ctx.ui.confirm() 检查 confirmed 字段，ctx.ui.select/input 检查 value
 		if ("confirmed" in response) extPayload.confirmed = response.confirmed;
 		// 取消时发 cancelled: true
 		if (response.cancelled) extPayload.cancelled = true;
@@ -3208,10 +3274,10 @@ export class AgentManager {
 	}
 
 	/**
-	 * pi 信任机制只对“含项目级 pi 资源”的项目触发，且 RPC 模式下 pi 的 project_trust 事件
+	 * sd 信任机制只对“含项目级 sd 资源”的项目触发，且 RPC 模式下 sd 的 project_trust 事件
 	 * hasUI 恒为 false、ctx.ui.select 不接 RPC UI 协议，无法弹窗。
-	 * 因此 snacode 在启动 pi 进程前自行完成信任确认：干净项目自动信任并写入 trust.json；
-	 * 含 .pi/.agents 资源且未记录的项目弹窗让用户决策。
+	 * 因此 snacode 在启动 sd 进程前自行完成信任确认：干净项目自动信任并写入 trust.json；
+	 * 含 .sd/.agents 资源且未记录的项目弹窗让用户决策。
 	 */
 	private static readonly TRUST_REQUIRING_RESOURCE_FILES = [
 		"settings.json",
@@ -3224,12 +3290,12 @@ export class AgentManager {
 	] as const;
 
 	/**
-	 * 复刻 pi 的 hasTrustRequiringProjectResources：检查项目目录或其父目录是否存在
-	 * 需要信任才能加载的资源（.pi 下的配置/扩展/skills 等，或项目级 .agents/skills）。
+	 * 复刻 sd 的 hasTrustRequiringProjectResources：检查项目目录或其父目录是否存在
+	 * 需要信任才能加载的资源（.sd 下的配置/扩展/skills 等，或项目级 .agents/skills）。
 	 * 用户全局 ~/.agents/skills 视为可信，不触发信任确认。
 	 */
 	private hasTrustRequiringResources(hostCwd: string): boolean {
-		const configDir = join(hostCwd, ".pi");
+		const configDir = join(hostCwd, ".sd");
 		if (
 			AgentManager.TRUST_REQUIRING_RESOURCE_FILES.some((file) => existsSync(join(configDir, file)))
 		) {
@@ -3253,18 +3319,24 @@ export class AgentManager {
 	}
 
 	/**
-	 * 启动 pi 前完成项目信任确认。
+	 * 启动 sd 前完成项目信任确认。
 	 * - 无需信任资源的项目（干净项目）：自动写入 trust.json 标记信任，后续不再重复检查。
 	 * - 含信任资源的项目：已信任则放行；已显式拒绝则抛错；未记录则弹窗等待用户决策。
 	 */
 	/**
-	 * 启动 pi 前完成项目信任确认，返回需传给 pi 的信任覆盖指令。
-	 * - 无需信任资源的项目（干净项目）：自动写入 trust.json 标记信任。
-	 * - 已信任：放行，pi 查 trustStore 即可。
-	 * - 未记录或曾记 false：弹窗让用户选择。不持久化 false，保证下次仍可重新选择。
-	 *   - trust-remember：写 true，pi 信任加载资源。
+	 * 启动 sd 前完成项目信任确认，返回需传给 sd 的信任覆盖指令。
+	 * 根据用户设置的 defaultProjectTrust 决定是否需要用户确认：
+	 * - always：所有项目自动信任
+	 * - ask（默认）：新项目需要用户确认，已记录信任决策的项目直接使用记录
+	 * - never：默认不信任，需要用户确认
+	 * 
+	 * 具体逻辑：
+	 * - 已信任：放行，sd 查 trustStore 即可。
+	 * - 含信任资源的项目：始终需要用户确认（安全优先）
+	 * - 干净项目：根据 defaultProjectTrust 设置决定是否自动信任
+	 *   - trust-remember：写 true，sd 信任加载资源。
 	 *   - trust-session：用 --approve 本次覆盖，不落盘。
-	 *   - deny：用 --no-approve 本次以不信任模式启动，pi 不加载项目级资源，Agent 仍可创建。
+	 *   - deny：用 --no-approve 本次以不信任模式启动，sd 不加载项目级资源，Agent 仍可创建。
 	 */
 	private async ensureProjectTrust(project: Project): Promise<"approve" | "no-approve" | undefined> {
 		const cwd = this.wslEnvironment
@@ -3273,26 +3345,60 @@ export class AgentManager {
 		const hostCwd = this.wslEnvironment
 			? toWindowsHostPath(project.path, this.wslEnvironment)
 			: project.path;
-		if (!this.hasTrustRequiringResources(hostCwd)) {
-			// 干净项目：pi 无需加载项目级资源，snacode 自动记入信任，避免每次创建 Agent 重复检查。
-			void this.appLogger?.info("agent", "Agent ensure trusted directory start", { cwd });
-			await this.configManager.ensureTrustedDirectory(cwd);
-			void this.appLogger?.info("agent", "Agent ensure trusted directory completed", { cwd });
-			return undefined;
-		}
+
+		const hasTrustResources = this.hasTrustRequiringResources(hostCwd);
 		const decision = await this.configManager.getProjectTrustDecision(cwd);
+		const defaultTrust = this.settingsStore.get().defaultProjectTrust;
+
+		// 已记录信任决策：直接使用记录
 		if (decision === true) return undefined;
-		// 未记录或曾记 false：弹窗让用户选择信任策略。不写 false，确保下次打开仍可重新决策。
-		const choice = await this.requestProjectTrust(cwd, project.name);
-		if (choice === "trust-remember") {
-			await this.configManager.setProjectTrustDecision(cwd, true);
-			return undefined;
+		if (decision === false) {
+			// 用户曾拒绝信任，本次默认也不信任，需要用户重新确认
+			return "no-approve";
 		}
-		if (choice === "trust-session") {
-			return "approve";
+
+		// 含信任资源的项目：始终需要用户确认（安全优先）
+		if (hasTrustResources) {
+			const choice = await this.requestProjectTrust(cwd, project.name);
+			if (choice === "trust-remember") {
+				await this.configManager.setProjectTrustDecision(cwd, true);
+				return undefined;
+			}
+			if (choice === "trust-session") {
+				return "approve";
+			}
+			return "no-approve";
 		}
-		// deny：本次以不信任模式启动，pi 不加载项目级资源，Agent 仍可创建。
-		return "no-approve";
+
+		// 干净项目：根据默认信任设置决定
+		switch (defaultTrust) {
+			case "always":
+				// 自动信任并记录，避免下次重复检查
+				await this.configManager.ensureTrustedDirectory(cwd);
+				return undefined;
+			case "never":
+				// 默认不信任，需要用户确认
+				const choice = await this.requestProjectTrust(cwd, project.name);
+				if (choice === "trust-remember") {
+					await this.configManager.setProjectTrustDecision(cwd, true);
+					return undefined;
+				}
+				if (choice === "trust-session") {
+					return "approve";
+				}
+				return "no-approve";
+			default: // "ask"
+				// 默认需要用户确认
+				const askChoice = await this.requestProjectTrust(cwd, project.name);
+				if (askChoice === "trust-remember") {
+					await this.configManager.setProjectTrustDecision(cwd, true);
+					return undefined;
+				}
+				if (askChoice === "trust-session") {
+					return "approve";
+				}
+				return "no-approve";
+		}
 	}
 
 	/**
@@ -3498,7 +3604,7 @@ export class AgentManager {
 		// 如果是后者（如 tool_execution_end 不带 args），直接复用已有字符串避免 double encoding。
 		const argsMeta = typeof args === "string" ? args : this.truncateForDetail(this.safeJson(args));
 		// 提取 ask_question 详情用于渲染提问卡片；支持批量（questions 数组）和单问题两种格式。
-		// pi RPC 返回格式可能为 result.details 嵌套 或 result 顶层（无 details 包装）
+		// sd RPC 返回格式可能为 result.details 嵌套 或 result 顶层（无 details 包装）
 		const askDetails = (() => {
 			if (toolName !== "ask_question" || !result || typeof result !== "object") return undefined;
 			// 格式 1: result.details.question 或 result.details.answers（批量）
@@ -3842,7 +3948,7 @@ export class AgentManager {
 					// 从历史工具结果中提取 ask_question 详情，用于渲染提问卡片（支持单问题和批量格式）。
 					const askCard = (() => {
 						if (toolName !== "ask_question" || !typed.details) return undefined;
-						// abort 时发 value:null 导致 answer 为 null，但 pi 可能已默认选了第一选项。
+						// abort 时发 value:null 导致 answer 为 null，但 sd 可能已默认选了第一选项。
 						// 覆写 answer 为 null、answered 为 false，确保卡片显示"已取消"。
 						const aborted = this.abortedDuringAsk.has(agentId);
 						// 单问题格式：details.question (string), details.answer
@@ -3937,7 +4043,7 @@ export class AgentManager {
 				if (!block || typeof block !== "object") continue;
 				const toolCall = block as any;
 				if (toolCall.type !== "toolCall" || !toolCall.id) continue;
-				// pi 的历史文件把工具参数保存在 assistant.content 的 toolCall 块中，
+				// sd 的历史文件把工具参数保存在 assistant.content 的 toolCall 块中，
 				// toolResult 只带结果；恢复历史详情时必须先建立 toolCallId → 参数映射。
 				calls.set(String(toolCall.id), {
 					name: String(toolCall.name ?? "tool"),
@@ -4126,7 +4232,7 @@ export class AgentManager {
 		return extractMessageText(content);
 	}
 
-	/** 从 pi 历史消息 content 中恢复图片附件，用于历史会话重新打开后的图片展示。 */
+	/** 从 sd 历史消息 content 中恢复图片附件，用于历史会话重新打开后的图片展示。 */
 	private extractImages(content: unknown): ImageContent[] {
 		if (!Array.isArray(content)) return [];
 		return content.flatMap<ImageContent>((item) => {

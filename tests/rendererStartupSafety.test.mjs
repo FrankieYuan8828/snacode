@@ -6,7 +6,7 @@ const extensionsTabSource = readFileSync("src/renderer/src/config/ExtensionsTab.
 const browserApiSource = readFileSync("src/renderer/src/browserApi.ts", "utf8");
 
 test("extensions settings tab does not read preload API at module load", () => {
-	assert.doesNotMatch(extensionsTabSource, /const\s+api[\s\S]*window\.piDesktop!?\.[a-zA-Z]/);
+	assert.doesNotMatch(extensionsTabSource, /const\s+api[\s\S]*window\.snacodeDesktop!?\.[a-zA-Z]/);
 	assert.match(extensionsTabSource, /function getExtensionsApi\(/);
 });
 

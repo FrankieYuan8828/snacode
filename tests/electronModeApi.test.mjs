@@ -17,7 +17,7 @@ test("Electron renderer does not fall back to preview browser API when preload i
 	assert.match(appSource, /missingElectronPreload\s*\?\s*createUnavailableDesktopApi\(\)/);
 	assert.doesNotMatch(
 		appSource,
-		/window\.piDesktop\s*\?\?\s*\(isLanWeb\s*\?\s*createBrowserApi\(\)\s*:\s*createPreviewApi\(\)\)/,
+		/window\.snacodeDesktop\s*\?\?\s*\(isLanWeb\s*\?\s*createBrowserApi\(\)\s*:\s*createPreviewApi\(\)\)/,
 	);
 	assert.doesNotMatch(
 		appSource,
@@ -52,7 +52,7 @@ test("main window logs configured preload file and preload reports initializatio
 	assert.match(mainSource, /ipcMain\.on\(ipcChannels\.preloadError/);
 	assert.match(preloadSource, /ipcChannels\.preloadReady/);
 	assert.match(preloadSource, /ipcChannels\.preloadError/);
-	assert.match(preloadSource, /contextBridge\.exposeInMainWorld\("piDesktop", api\)/);
+	assert.match(preloadSource, /contextBridge\.exposeInMainWorld\("snacodeDesktop", api\)/);
 	assert.match(ipcSource, /preloadReady:\s*"preload:ready"/);
 	assert.match(ipcSource, /preloadError:\s*"preload:error"/);
 });

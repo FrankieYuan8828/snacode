@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+﻿import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import type {
@@ -15,8 +15,8 @@ const SKILL_FILE = "SKILL.md";
 type ProjectProvider = (projectId: string) => Project | undefined;
 
 /**
- * 管理单个项目目录内的 pi 资源。
- * 仅扫描/删除项目目录下的 .pi/.agents 资源，避免把全局 skill/extension 混入项目级弹框。
+ * 管理单个项目目录内的 sd 资源。
+ * 仅扫描/删除项目目录下的 .sd/.agents 资源，避免把全局 skill/extension 混入项目级弹框。
  */
 export class ProjectResourceManager {
 	constructor(private readonly getProject: ProjectProvider) {}
@@ -91,13 +91,13 @@ export class ProjectResourceManager {
 	async toggleExtension(projectId: string, extensionPath: string, enabled: boolean): Promise<void> {
 		const project = this.requireProject(projectId);
 		this.assertInsideProject(project, extensionPath);
-		// 项目级扩展的禁用通过项目的 .pi/settings.json 中的 disabledExtensions 控制
-		const settingsFile = join(project.path, ".pi", "settings.json");
+		// 项目级扩展的禁用通过项目的 .sd/agent/settings.json 中的 disabledExtensions 控制
+		const settingsFile = join(project.path, ".sd", "agent", "settings.json");
 		let raw = "{}";
 		try { raw = await readFile(settingsFile, "utf8"); } catch {}
 		const settings = JSON.parse(raw);
 		const disabled: string[] = settings.disabledExtensions ?? [];
-		// 使用扩展文件名/目录名作为标识（与 pi list 输出对齐）
+		// 使用扩展文件名/目录名作为标识（与 sd list 输出对齐）
 		const extName = extensionPath.split(/[\\/]/).pop() ?? extensionPath;
 		if (enabled) {
 			settings.disabledExtensions = disabled.filter((s) => s !== extName);
@@ -176,13 +176,13 @@ export class ProjectResourceManager {
 	}
 
 	private async listExtensions(project: Project): Promise<ExtensionSummary[]> {
-		const extensionsDir = join(project.path, ".pi", "extensions");
+		const extensionsDir = join(project.path, ".sd", "extensions");
 		const entries = await readdir(extensionsDir, { withFileTypes: true }).catch(() => []);
 		const result: ExtensionSummary[] = [];
 		// 读取项目级 disabledExtensions
 		let disabledExts = new Set<string>();
 		try {
-			const raw = await readFile(join(project.path, ".pi", "settings.json"), "utf8");
+			const raw = await readFile(join(project.path, ".sd", "settings.json"), "utf8");
 			const settings = JSON.parse(raw);
 			disabledExts = new Set(settings.disabledExtensions ?? []);
 		} catch {}
@@ -216,9 +216,9 @@ export class ProjectResourceManager {
 	private skillLocations(project: Project): SkillLocation[] {
 		return [
 			{
-				id: "project-pi",
-				label: ".pi/skills",
-				path: join(project.path, ".pi", "skills"),
+				id: "project-snacode",
+				label: ".sd/skills",
+				path: join(project.path, ".sd", "skills"),
 				rootMarkdownEnabled: true,
 			},
 			{
@@ -315,7 +315,7 @@ export class ProjectResourceManager {
 			warnings.push("name 只能包含小写字母、数字和单个连字符");
 		}
 		if (name.length > 64) warnings.push("name 超过 64 个字符");
-		if (!description) warnings.push("缺少 description，pi 不会加载该 skill");
+		if (!description) warnings.push("缺少 description，sd 不会加载该 skill");
 		if (description.length > 1024) warnings.push("description 超过 1024 个字符");
 		return warnings;
 	}

@@ -11,7 +11,7 @@ import { toWslLinuxPath, type WslEnvironment } from "../wsl/WslPaths";
 import { SessionSummaryCache, type SessionFileVersion } from "./sessionSummaryCache";
 
 export class SessionScanner {
-  private readonly root = join(app.getPath("home"), ".pi", "agent", "sessions");
+  private readonly root = join(app.getPath("home"), ".sd", "agent", "sessions");
   private readonly codexRoot = join(app.getPath("home"), ".codex", "sessions");
   /** WSL 配置由主进程统一解析；内部保留 home 字段以维持扫描代码的单一 Linux 路径语义。 */
   private wslConfig: { distro: string; user: string; home: string } | null = null;
@@ -65,7 +65,7 @@ export class SessionScanner {
     void this.summaryCache.reloadFromDisk();
   }
 
-  /** WSL 中 pi 默认 session 目录（基于动态获取的 home） */
+  /** WSL 中 sd 默认 session 目录（基于动态获取的 home） */
   private get wslSessionsDir(): string {
     return `${this.wslConfig!.home}/.sd/agent/sessions`;
   }
@@ -235,8 +235,8 @@ export class SessionScanner {
       // 重启后先恢复磁盘摘要缓存，避免全量重读 JSONL。
       await this.summaryCache.ensureLoaded();
 
-      // 扫描根 = 默认全局 sessions + 项目/全局 sessionDir（如 <project>/.pi/sessions）。
-      // pi 配置 sessionDir 后不再写 encoded-cwd 子目录，必须额外扫该路径。
+      // 扫描根 = 默认全局 sessions + 项目/全局 sessionDir（如 <project>/.sd/sessions）。
+      // sd 配置 sessionDir 后不再写 encoded-cwd 子目录，必须额外扫该路径。
       const scanRoots = await this.resolveScanRoots(projectPath, normalizedProjectPath);
       this.activeScanRoots = scanRoots;
 
@@ -280,7 +280,7 @@ export class SessionScanner {
    * 解析本次应扫描的会话根目录。
    * 始终包含默认全局目录（保留历史会话）；若 settings 配置了 sessionDir 且目录存在则追加。
    *
-   * @param hostProjectPath 项目原始路径（通常是 Windows 路径，用于读 .pi/settings.json）
+   * @param hostProjectPath 项目原始路径（通常是 Windows 路径，用于读 .sd/settings.json）
    * @param runtimeProjectPath 运行时 cwd 路径（WSL 下已是 /mnt/...，用于解析相对 sessionDir）
    */
   private async resolveScanRoots(
@@ -305,13 +305,13 @@ export class SessionScanner {
 
   /**
    * 读取 Snacode 的 sessionDir 配置并解析为可扫描绝对路径。
-   * 优先级：项目 `.sd/settings.json` > 全局 `~/.sd/agent/settings.json`。
+   * 优先级：项目 `.sd/agent/settings.json` > 全局 `~/.sd/agent/settings.json`。
    */
   private async resolveConfiguredSessionDir(
     hostProjectPath: string,
     runtimeProjectPath: string,
   ): Promise<string | undefined> {
-    const projectSettingsPath = join(this.toHostReadablePath(hostProjectPath), ".pi", "settings.json");
+    const projectSettingsPath = join(this.toHostReadablePath(hostProjectPath), ".sd", "agent", "settings.json");
     const projectRaw = await this.readSessionDirSettingLocal(projectSettingsPath);
 
     const globalRaw = this.wslConfig
@@ -350,7 +350,7 @@ export class SessionScanner {
 
   /**
    * 将 sessionDir 配置解析为扫描用绝对路径。
-   * 对齐 pi：展开 `~`；相对路径相对项目 cwd（非 settings 文件目录）。
+   * 对齐 sd：展开 `~`；相对路径相对项目 cwd（非 settings 文件目录）。
    */
   private resolveSessionDirPath(sessionDir: string, projectCwd: string): string {
     const expanded = this.expandHomePrefix(sessionDir);
@@ -435,7 +435,7 @@ export class SessionScanner {
 
   /**
    * 重命名会话：在 JSONL 文件头部插入一条 sessionName 元数据。
-   * pi 读取时会取第一个遇到的 sessionName 字段，所以插在最前面即可覆盖旧名。
+   * sd 读取时会取第一个遇到的 sessionName 字段，所以插在最前面即可覆盖旧名。
    * 支持 WSL 路径。
    */
   async rename(filePath: string, newName: string): Promise<void> {
@@ -466,7 +466,7 @@ export class SessionScanner {
 
     let output: string;
     if (!found) {
-      // 没有旧 sessionName 行，前置插入（行为与 pi 原生一致）
+      // 没有旧 sessionName 行，前置插入（行为与 sd 原生一致）
       output = `${metaLine}\n${raw}`;
     } else if (sessionNameCount > 5) {
       // sessionName 行数超过阈值，清理多余的旧 sessionName 行
@@ -840,10 +840,10 @@ export class SessionScanner {
    * 从文件路径推断父会话文件路径。
    *
    * 算法：从子会话文件所在目录向上遍历，在每一层检查同级目录中是否存在
-   * <dirname>.jsonl 文件，并校验其内容为合法 Pi Agent 会话 JSONL。
+   * <dirname>.jsonl 文件，并校验其内容为合法 Sd Agent 会话 JSONL。
    *
    * 支持的布局（任一扩展都可用）：
-   *   - pi-subagents:  <stem>/<run-id>/run-N/session.jsonl → 父 = <stem>.jsonl
+   *   - sd-subagents:  <stem>/<run-id>/run-N/session.jsonl → 父 = <stem>.jsonl
    *   - Claude Code 式: <stem>/subagents/agent-<id>.jsonl    → 父 = <stem>.jsonl
    *   - 自定义嵌套:     <stem>/any/deep/path/session.jsonl   → 父 = <stem>.jsonl
    *
@@ -879,7 +879,7 @@ export class SessionScanner {
   }
 
   /**
-   * 快速校验 Windows 本地路径是否为 Pi Agent 会话 JSONL（非备份/导出/重命名残留）。
+   * 快速校验 Windows 本地路径是否为 Sd Agent 会话 JSONL（非备份/导出/重命名残留）。
    * 真实会话的首行通常是 `type: session`；兼容 Snacode 重命名后前置的 sessionName 元数据，
    * 但要求随后仍出现 type 字段，不能只凭任意 JSON 对象误判为父会话。
    */
@@ -967,7 +967,7 @@ export class SessionScanner {
     let firstAssistantText = "";
     let messageCount = 0;
     /** 会话来源：扫描前几行检测导入标记 */
-    let source: SessionSummary["source"] = "pi";
+    let source: SessionSummary["source"] = "sd";
     let codexSessionId: string | undefined;
     let codexThreadSource: SessionSummary["codexThreadSource"];
     let codexParentThreadId: string | undefined;
@@ -988,12 +988,12 @@ export class SessionScanner {
         forkParentSession ||= this.optionalString(entry.parentSession ?? entry.header?.parentSession);
       }
       // 检测显式子会话标记：支持任何 "*.child-session" 格式，
-      // 不仅限于 pi-subagents，未来其他扩展也可沿用此约定。
+      // 不仅限于 sd-subagents，未来其他扩展也可沿用此约定。
       if (entry.type === "custom" && typeof entry.customType === "string" && entry.customType.endsWith(".child-session")) {
         hasSubagentChildMarker = true;
       }
       // 扫描前几行的非消息条目，检测导入来源标记
-      if (source === "pi") {
+      if (source === "sd") {
         if (entry.type === "codex_import") {
           source = "codex";
           codexSessionId = this.optionalString(entry.codexSessionId);
@@ -1049,7 +1049,7 @@ export class SessionScanner {
       subagentScore.parentHeader;
 
     let parentSessionPath: string | undefined;
-    if (source === "pi" && confidenceScore >= 2) {
+    if (source === "sd" && confidenceScore >= 2) {
       // 优先复用上面已完成的路径推断，避免重复遍历文件系统/WSL。
       parentSessionPath = pathInferredParent;
       // 路径推断失败时，尝试使用 forkParentSession header 引用的父路径
@@ -1163,8 +1163,8 @@ export class SessionScanner {
       const encoded = normalized.slice(index + marker.length).split("/")[0];
       return this.decodeSessionDir(encoded);
     }
-    // 常见项目级 sessionDir：<project>/.pi/sessions/...
-    const customMarker = "/.pi/sessions/";
+    // 常见项目级 sessionDir：<project>/.sd/sessions/...
+    const customMarker = "/.sd/sessions/";
     const customIndex = normalized.toLowerCase().lastIndexOf(customMarker);
     if (customIndex !== -1) {
       return this.normalize(normalized.slice(0, customIndex));
@@ -1197,7 +1197,7 @@ export class SessionScanner {
   }
 
   private decodeSessionDir(encoded: string) {
-    // pi 会把 cwd 存成 --C--Users-name-project--（Windows）或 --mnt-c-Users-name-project--（WSL）等目录名；
+    // sd 会把 cwd 存成 --C--Users-name-project--（Windows）或 --mnt-c-Users-name-project--（WSL）等目录名；
     // 这里只用于展示和匹配，不写回 session。
     const trimmed = encoded.replace(/^--|--$/g, "");
     // WSL /mnt/ 路径：--mnt-c-Users-...--
@@ -1217,7 +1217,7 @@ export class SessionScanner {
     if (normalizedSessionProject === normalizedProject) return true;
     if (await this.isParentSessionForProject(normalizedSessionProject, normalizedProject, summary.filePath, signal)) return true;
 
-    // 项目级自定义 sessionDir（如 <project>/.pi/sessions）下的文件默认归属该项目。
+    // 项目级自定义 sessionDir（如 <project>/.sd/sessions）下的文件默认归属该项目。
     // 该布局不再使用 encoded-cwd 子目录，safePathToken 无法从路径反推项目。
     if (this.isUnderProjectSessionDir(summary.filePath, projectPath)) return true;
 
@@ -1249,7 +1249,7 @@ export class SessionScanner {
   }
 
   private async isParentSessionForProject(sessionProject: string, projectPath: string, filePath: string, signal?: AbortSignal) {
-    // 早期用户常在 home 目录启动 pi 再操作子项目；这类历史 session 的 cwd 是父目录，
+    // 早期用户常在 home 目录启动 sd 再操作子项目；这类历史 session 的 cwd 是父目录，
     // 但文件内容可能明确提到当前项目。仅对父目录 session 做内容校验，避免把无关 home 会话全部展示到子项目下。
     if (!sessionProject || !projectPath.startsWith(`${sessionProject}/`)) return false;
     const text = await this.readCachedText(filePath, signal);

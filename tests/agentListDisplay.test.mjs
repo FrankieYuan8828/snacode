@@ -62,7 +62,7 @@ test("sidebar highlight follows only the session currently displayed in the conv
 
 test("viewer handoff only bridges the matching historical session", () => {
 	const { getSessionViewerHandoffState } = loadModule();
-	const viewerSessionPath = "C:\\Users\\Dev\\.pi\\agent\\sessions\\old.jsonl";
+	const viewerSessionPath = "C:\\Users\\Dev\\.sd\\agent\\sessions\\old.jsonl";
 	const assertState = (input, expected) => {
 		const actual = getSessionViewerHandoffState(input);
 		// transpiled module runs in a vm realm, so compare scalar fields instead of object prototypes.
@@ -86,7 +86,7 @@ test("viewer handoff only bridges the matching historical session", () => {
 		{
 			viewerSessionPath,
 			activeAgentId: "pending-resume",
-			activeAgentSessionPath: "c:/users/dev/.pi/agent/sessions/old.jsonl",
+			activeAgentSessionPath: "c:/users/dev/.sd/agent/sessions/old.jsonl",
 			activeAgentPending: true,
 		},
 		{ isViewerActive: true, canBridgeMessages: true },
@@ -95,7 +95,7 @@ test("viewer handoff only bridges the matching historical session", () => {
 		{
 			viewerSessionPath,
 			activeAgentId: "agent-new",
-			activeAgentSessionPath: "C:\\Users\\Dev\\.pi\\agent\\sessions\\new.jsonl",
+			activeAgentSessionPath: "C:\\Users\\Dev\\.sd\\agent\\sessions\\new.jsonl",
 			activeAgentPending: false,
 		},
 		{ isViewerActive: false, canBridgeMessages: false },
@@ -104,7 +104,7 @@ test("viewer handoff only bridges the matching historical session", () => {
 		{
 			viewerSessionPath,
 			activeAgentId: "agent-resume",
-			activeAgentSessionPath: "C:\\Users\\Dev\\.pi\\agent\\sessions\\old.jsonl",
+			activeAgentSessionPath: "C:\\Users\\Dev\\.sd\\agent\\sessions\\old.jsonl",
 			activeAgentPending: false,
 		},
 		{ isViewerActive: false, canBridgeMessages: true },
@@ -143,19 +143,19 @@ test("groups imported Codex subagent sessions under their parent session", () =>
 	assert.equal(display.children[0].codexSubagents[0].name, "Reviewer");
 });
 
-test("groups Pi child sessions under a parent using normalized paths", () => {
+test("groups Sd child sessions under a parent using normalized paths", () => {
 	const { getProjectAgentSessionDisplay } = loadModule();
-	const parentPath = "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent.jsonl";
+	const parentPath = "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent.jsonl";
 	const display = getProjectAgentSessionDisplay({
 		agents: [],
 		sessions: [
-			session({ filePath: parentPath, name: "Parent", source: "pi", updatedAt: 10 }),
+			session({ filePath: parentPath, name: "Parent", source: "sd", updatedAt: 10 }),
 			session({
-				filePath: "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent\\run\\run-0\\session.jsonl",
+				filePath: "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent\\run\\run-0\\session.jsonl",
 				name: "Worker",
-				source: "pi",
+				source: "sd",
 				updatedAt: 12,
-				parentSessionPath: "c:/users/dev/.pi/agent/sessions/parent.jsonl",
+				parentSessionPath: "c:/users/dev/.sd/agent/sessions/parent.jsonl",
 			}),
 		],
 		visibleChildCount: 5,
@@ -163,18 +163,18 @@ test("groups Pi child sessions under a parent using normalized paths", () => {
 
 	assert.equal(display.children.length, 1);
 	assert.equal(display.children[0].type, "session");
-	assert.equal(display.children[0].piSubagents.length, 1);
-	assert.equal(display.children[0].piSubagents[0].name, "Worker");
+	assert.equal(display.children[0].sdSubagents.length, 1);
+	assert.equal(display.children[0].sdSubagents[0].name, "Worker");
 });
 
-test("keeps a started Pi child session nested under its parent without a duplicate top-level agent", () => {
+test("keeps a started Sd child session nested under its parent without a duplicate top-level agent", () => {
 	const { getAgentForSessionPath, getProjectAgentSessionDisplay } = loadModule();
-	const parentPath = "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent.jsonl";
-	const childPath = "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent\\run\\run-0\\session.jsonl";
+	const parentPath = "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent.jsonl";
+	const childPath = "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent\\run\\run-0\\session.jsonl";
 	const childSession = session({
 		filePath: childPath,
 		name: "Worker",
-		source: "pi",
+		source: "sd",
 		updatedAt: 12,
 		parentSessionPath: parentPath,
 	});
@@ -190,7 +190,7 @@ test("keeps a started Pi child session nested under its parent without a duplica
 	const display = getProjectAgentSessionDisplay({
 		agents: [pendingChildAgent],
 		sessions: [
-			session({ filePath: parentPath, name: "Parent", source: "pi", updatedAt: 10 }),
+			session({ filePath: parentPath, name: "Parent", source: "sd", updatedAt: 10 }),
 			childSession,
 		],
 		visibleChildCount: 5,
@@ -199,11 +199,11 @@ test("keeps a started Pi child session nested under its parent without a duplica
 	assert.equal(display.children.length, 1);
 	assert.equal(display.children[0].type, "session");
 	assert.equal(display.children[0].session.name, "Parent");
-	assert.equal(display.children[0].piSubagents.length, 1);
+	assert.equal(display.children[0].sdSubagents.length, 1);
 	assert.equal(getAgentForSessionPath([pendingChildAgent], childSession.filePath).id, "pending-child");
 });
 
-test("does not duplicate an orphan Pi child when its Agent is already the top-level fallback", () => {
+test("does not duplicate an orphan Sd child when its Agent is already the top-level fallback", () => {
 	const { getProjectAgentSessionDisplay } = loadModule();
 	const childPath = "/sessions/missing-parent/run/run-0/session.jsonl";
 	const display = getProjectAgentSessionDisplay({
@@ -219,7 +219,7 @@ test("does not duplicate an orphan Pi child when its Agent is already the top-le
 		sessions: [session({
 			filePath: childPath,
 			name: "Worker",
-			source: "pi",
+			source: "sd",
 			updatedAt: 12,
 			parentSessionPath: "/sessions/missing-parent.jsonl",
 		})],
@@ -230,9 +230,9 @@ test("does not duplicate an orphan Pi child when its Agent is already the top-le
 	assert.equal(display.children[0].type, "agent");
 });
 
-test("groups Pi child sessions under an agent whose linked session was filtered out", () => {
+test("groups Sd child sessions under an agent whose linked session was filtered out", () => {
 	const { getProjectAgentSessionDisplay } = loadModule();
-	const parentPath = "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent.jsonl";
+	const parentPath = "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent.jsonl";
 	const agent = {
 		id: "agent-1",
 		projectId: "p1",
@@ -246,11 +246,11 @@ test("groups Pi child sessions under an agent whose linked session was filtered 
 		sessions: [
 			// 父 sessions 列表不包含父文件（模拟被 Agent 激活后滤掉）
 			session({
-				filePath: "C:\\Users\\Dev\\.pi\\agent\\sessions\\parent\\run\\run-0\\session.jsonl",
+				filePath: "C:\\Users\\Dev\\.sd\\agent\\sessions\\parent\\run\\run-0\\session.jsonl",
 				name: "Worker",
-				source: "pi",
+				source: "sd",
 				updatedAt: 12,
-				parentSessionPath: "c:/users/dev/.pi/agent/sessions/parent.jsonl",
+				parentSessionPath: "c:/users/dev/.sd/agent/sessions/parent.jsonl",
 			}),
 		],
 		visibleChildCount: 5,
@@ -258,6 +258,6 @@ test("groups Pi child sessions under an agent whose linked session was filtered 
 
 	assert.equal(display.children.length, 1);
 	assert.equal(display.children[0].type, "agent");
-	assert.equal(display.children[0].piSubagents.length, 1);
-	assert.equal(display.children[0].piSubagents[0].name, "Worker");
+	assert.equal(display.children[0].sdSubagents.length, 1);
+	assert.equal(display.children[0].sdSubagents[0].name, "Worker");
 });

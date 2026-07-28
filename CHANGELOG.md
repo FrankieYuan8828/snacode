@@ -157,7 +157,7 @@ All notable changes to Snacode are documented here.
 
 Thanks to all contributors for their PRs, issues, and feedback:
 
-- **@1900EasonJin** — Feishu integration, MemSpacedCard, think throttling, sidebar
+- **@FrankieYuan8828** — Feishu integration, MemSpacedCard, think throttling, sidebar
   card design, ScratchPad, terminal encoding fix (#80, #74, #60, #44, #42, #35, #34)
 - **@frostime** — Session info sync, custom font/zoom, model picker auto-scroll,
   max thinking level, RPC extension lifecycle (#58, #56, #53, #52, #50)
@@ -181,7 +181,7 @@ community testing environment 🎉
 ### 🚀 New Features
 
 - **Prompt Templates System (Major)**
-  - `PromptManager` with full CRUD and IPC bridge for `~/.pi/agent/prompts/`
+  - `PromptManager` with full CRUD and IPC bridge for `~/.sd/agent/prompts/`
   - `PromptsTab` settings page with Monaco Editor (create/edit/preview/delete)
   - `/` picker in composer to insert templates with `$N` variable hints
   - Project-level prompts (create/edit/delete in ProjectResourcesModal)
@@ -443,7 +443,7 @@ community testing environment 🎉
 ### 📦 Chore
 
 - Revert package files to upstream
-- Add @1900EasonJin to contributors
+- Add @FrankieYuan8828 to contributors
 
 ### 📖 Documentation
 
@@ -456,7 +456,7 @@ community testing environment 🎉
 
 ### 🤝 Contributors
 
-Thanks to @ayuayue, @1900EasonJin, @zx3022448 for their contributions!
+Thanks to @ayuayue, @FrankieYuan8828, @zx3022448 for their contributions!
 
 ## v0.6.2 - 2026-06-22
 
@@ -594,7 +594,7 @@ Thanks to @ayuayue, @1900EasonJin, @zx3022448 for their contributions!
 ## v0.4.17 - 2026-06-11
 
 ### Added
-- Global Skill management: the configuration modal now has a standalone Skills page for listing skills from `~/.pi/agent/skills` and `~/.agents/skills`.
+- Global Skill management: the configuration modal now has a standalone Skills page for listing skills from `~/.sd/agent/skills` and `~/.agents/skills`.
 - Skill actions: create a Skill template, enable or disable model invocation, delete a Skill with an in-app confirmation dialog, and open Skill folders from the desktop UI.
 - Manual pi path fallback: users can enter a custom pi path when automatic detection fails, and the Settings page now shows the active pi path inline.
 

@@ -51,7 +51,7 @@ function loadSessionScanner(homePath, fsOverrides = {}) {
 	});
 	const codexMeta = loadCodexMetaModule();
 	const messageContent = loadTranspiledModule(
-		"src/main/pi/messageContent.ts",
+		"src/main/agent/messageContent.ts",
 		new Map([["../feishu/docActions", { stripFeishuDocActionHint: (text) => text }]]),
 	);
 	const sessionSummaryCache = loadTranspiledModule(
@@ -76,7 +76,7 @@ function loadSessionScanner(homePath, fsOverrides = {}) {
 				};
 			}
 			if (id === "../../shared/codexSessionMeta") return codexMeta;
-			if (id === "../pi/messageContent") return messageContent;
+			if (id === "../agent/messageContent") return messageContent;
 			if (id === "./sessionSummaryCache") return sessionSummaryCache;
 			if (id === "../wsl/WslPaths") return wslPaths;
 			if (id === "node:fs") return { ...require(id), ...fsOverrides };
@@ -148,28 +148,28 @@ test("aborts a hung WSL scan before the renderer watchdog and allows a clean ret
 	}
 });
 
-test("hides persisted pi-subagents runs without deleting them or unrelated nested sessions", async () => {
+test("hides persisted sd-subagents runs without deleting them or unrelated nested sessions", async () => {
 	const home = mkdtempSync(join(tmpdir(), "Snacode-subagent-scanner-"));
 	try {
 		const projectPath = "C:\\repo\\project";
-		const piDir = join(home, ".pi", "agent", "sessions", "--C--repo-project--");
-		const parentFile = join(piDir, "parent.jsonl");
-		const workerFile = join(piDir, "parent", "run-abc", "run-0", "session.jsonl");
-		const reviewerFile = join(piDir, "parent", "run-abc", "run-1", "session.jsonl");
-		const nestedUserFile = join(piDir, "manual", "notes.jsonl");
-		const lookalikeFile = join(piDir, "manual", "arbitrary", "run-0", "session.jsonl");
+		const sdDir = join(home, ".sd", "agent", "sessions", "--C--repo-project--");
+		const parentFile = join(sdDir, "parent.jsonl");
+		const workerFile = join(sdDir, "parent", "run-abc", "run-0", "session.jsonl");
+		const reviewerFile = join(sdDir, "parent", "run-abc", "run-1", "session.jsonl");
+		const nestedUserFile = join(sdDir, "manual", "notes.jsonl");
+	const lookalikeFile = join(sdDir, "manual", "arbitrary", "run-0", "session.jsonl");
 
-		writeSession(parentFile, session("Parent", projectPath));
-		writeSession(join(piDir, "ordinary.jsonl"), session("Ordinary", projectPath));
-		writeSession(join(piDir, "subagent-looking-name.jsonl"), session("subagent-worker-manual-0", projectPath));
-		// This sibling makes lookalikeFile collide with the legacy ownership layout.
-		writeSession(join(piDir, "manual.jsonl"), session("Manual owner", projectPath));
+	writeSession(parentFile, session("Parent", projectPath));
+	writeSession(join(sdDir, "ordinary.jsonl"), session("Ordinary", projectPath));
+	writeSession(join(sdDir, "subagent-looking-name.jsonl"), session("subagent-worker-manual-0", projectPath));
+	// This sibling makes lookalikeFile collide with the legacy ownership layout.
+	writeSession(join(sdDir, "manual.jsonl"), session("Manual owner", projectPath));
 		writeSession(nestedUserFile, session("Nested user session", projectPath));
 		writeSession(lookalikeFile, session("Path lookalike", projectPath));
 		// Explicit metadata covers new runs even when intercom naming is unavailable.
 		writeSession(workerFile, [
 			...session("Worker without generated name", projectPath),
-			{ type: "custom", customType: "pi-subagents.child-session", data: { schemaVersion: 1 } },
+			{ type: "custom", customType: "sd-subagents.child-session", data: { schemaVersion: 1 } },
 		]);
 		// Generated naming plus the standard path retains compatibility with old runs.
 		writeSession(reviewerFile, session("subagent-reviewer-run-abc-1", projectPath));
@@ -202,7 +202,7 @@ test("groups WSL child sessions with POSIX parent paths", async () => {
 	try {
 		const projectPath = "/mnt/f/git-optimize";
 		const selectedProjectPath = "//wsl.localhost/Ubuntu/mnt/f/git-optimize";
-		const sessionsRoot = "/home/dev/.pi/agent/sessions";
+		const sessionsRoot = "/home/dev/.sd/agent/sessions";
 		const parentFile = `${sessionsRoot}/--mnt-f-git-optimize--/parent.jsonl`;
 		const forkParentFile = `${sessionsRoot}/--mnt-f-git-optimize--/fork-parent.jsonl`;
 		const childFile = `${sessionsRoot}/--mnt-f-git-optimize--/parent/run-abc/run-0/session.jsonl`;
@@ -256,18 +256,18 @@ test("uses a valid renamed parent session and ignores false-positive path owners
 	const home = mkdtempSync(join(tmpdir(), "Snacode-renamed-parent-subagent-scanner-"));
 	try {
 		const projectPath = "C:\\repo\\project";
-		const piDir = join(home, ".pi", "agent", "sessions", "--C--repo-project--");
-		const parentFile = join(piDir, "renamed-parent.jsonl");
-		const childFile = join(piDir, "renamed-parent", "run-abc", "run-0", "session.jsonl");
-		const fakeOwnerFile = join(piDir, "manual.jsonl");
-		const lookalikeFile = join(piDir, "manual", "arbitrary", "run-0", "session.jsonl");
+		const sdDir = join(home, ".sd", "agent", "sessions", "--C--repo-project--");
+		const parentFile = join(sdDir, "renamed-parent.jsonl");
+		const childFile = join(sdDir, "renamed-parent", "run-abc", "run-0", "session.jsonl");
+		const fakeOwnerFile = join(sdDir, "manual.jsonl");
+		const lookalikeFile = join(sdDir, "manual", "arbitrary", "run-0", "session.jsonl");
 
 		writeSession(parentFile, [
 			{ sessionName: "Renamed parent", ts: Date.now() },
 			...session("Original parent", projectPath),
 		]);
 		writeSession(childFile, session("subagent-worker-renamed-parent-0", projectPath));
-		writeSession(fakeOwnerFile, [{ sessionName: "Not a Pi session" }]);
+		writeSession(fakeOwnerFile, [{ sessionName: "Not a Sd session" }]);
 		writeSession(lookalikeFile, session("Path lookalike", projectPath));
 
 		const { SessionScanner } = loadSessionScanner(home);
@@ -283,13 +283,13 @@ test("handles orphan, fork, rename and imported-session compatibility without fa
 	const home = mkdtempSync(join(tmpdir(), "Snacode-orphan-subagent-scanner-"));
 	try {
 		const projectPath = "/repo/project";
-		const piDir = join(home, ".pi", "agent", "sessions", "--repo-project--");
-		const orphanFile = join(piDir, "deleted-parent", "orphan-run", "run-0", "session.jsonl");
-		const renamedChildFile = join(piDir, "renamed-parent", "manual-run", "run-0", "session.jsonl");
-		const legacyForkFile = join(piDir, "legacy-fork.jsonl");
-		const manualForkFile = join(piDir, "manual-fork.jsonl");
-		const markedCustomFile = join(piDir, "custom-child-location.jsonl");
-		const importedFile = join(piDir, "codex-parent", "import-run", "run-0", "session.jsonl");
+		const sdDir = join(home, ".sd", "agent", "sessions", "--repo-project--");
+		const orphanFile = join(sdDir, "deleted-parent", "orphan-run", "run-0", "session.jsonl");
+		const renamedChildFile = join(sdDir, "renamed-parent", "manual-run", "run-0", "session.jsonl");
+		const legacyForkFile = join(sdDir, "legacy-fork.jsonl");
+		const manualForkFile = join(sdDir, "manual-fork.jsonl");
+		const markedCustomFile = join(sdDir, "custom-child-location.jsonl");
+		const importedFile = join(sdDir, "codex-parent", "import-run", "run-0", "session.jsonl");
 
 		writeSession(orphanFile, session("subagent-worker-orphan-run-0", projectPath));
 		// Snacode rename prepends sessionName; the original generated session_info remains authoritative.
@@ -308,12 +308,12 @@ test("handles orphan, fork, rename and imported-session compatibility without fa
 		]);
 		writeSession(markedCustomFile, [
 			...session("Custom-location child", projectPath),
-			{ type: "custom", customType: "pi-subagents.child-session", data: { schemaVersion: 1 } },
+			{ type: "custom", customType: "sd-subagents.child-session", data: { schemaVersion: 1 } },
 		]);
-		writeSession(join(piDir, "codex-parent.jsonl"), session("Codex owner", projectPath));
+		writeSession(join(sdDir, "codex-parent.jsonl"), session("Codex owner", projectPath));
 		writeSession(importedFile, [
 			...session("subagent-reviewer-import-run-0", projectPath),
-			{ type: "custom", customType: "pi-subagents.child-session", data: { schemaVersion: 1 } },
+			{ type: "custom", customType: "sd-subagents.child-session", data: { schemaVersion: 1 } },
 			{ type: "codex_import", version: 1, codexSessionId: "codex-child", sourcePath: join(home, "missing.jsonl") },
 		]);
 
@@ -349,7 +349,7 @@ test("resolves fork child with absolute Windows parent path via parentSession he
 	const home = mkdtempSync(join(tmpdir(), "Snacode-abs-fork-scanner-"));
 	try {
 		const projectPath = "C:\\repo\\project";
-		const sessionsRoot = join(home, ".pi", "agent", "sessions");
+		const sessionsRoot = join(home, ".sd", "agent", "sessions");
 		const projDir = join(sessionsRoot, "--C--repo-project--");
 		const parentFile = join(projDir, "parent.jsonl");
 		const forkChildFile = join(projDir, "fork-child.jsonl");
@@ -370,31 +370,31 @@ test("resolves fork child with absolute Windows parent path via parentSession he
 	}
 });
 
-test("reads project sessionDir from .pi/settings.json and lists local sessions", async () => {
+test("reads project sessionDir from .sd/agent/settings.json and lists local sessions", async () => {
 	const home = mkdtempSync(join(tmpdir(), "Snacode-session-dir-"));
 	const projectRoot = mkdtempSync(join(tmpdir(), "Snacode-session-dir-project-"));
 	try {
-		// 模拟 xxljob 场景：项目 .pi/settings.json 指定 sessionDir=.pi/sessions
-		mkdirSync(join(projectRoot, ".pi"), { recursive: true });
+		// 模拟 xxljob 场景：项目 .sd/agent/settings.json 指定 sessionDir=.sd/agent/sessions
+		mkdirSync(join(projectRoot, ".sd", "agent"), { recursive: true });
 		writeFileSync(
-			join(projectRoot, ".pi", "settings.json"),
-			JSON.stringify({ sessionDir: ".pi/sessions" }),
+			join(projectRoot, ".sd", "agent", "settings.json"),
+			JSON.stringify({ sessionDir: ".sd/agent/sessions" }),
 			"utf8",
 		);
 
-		const localSessionDir = join(projectRoot, ".pi", "sessions");
+		const localSessionDir = join(projectRoot, ".sd", "agent", "sessions");
 		const localSession = join(localSessionDir, "2026-07-24_local.jsonl");
 		const localChild = join(localSessionDir, "2026-07-24_local", "run-1", "run-0", "session.jsonl");
 		writeSession(localSession, session("Project local session", projectRoot));
 		writeSession(localChild, [
 			...session("subagent-worker-local-0", projectRoot),
-			{ type: "custom", customType: "pi-subagents.child-session", data: { schemaVersion: 1 } },
+			{ type: "custom", customType: "sd-subagents.child-session", data: { schemaVersion: 1 } },
 		]);
 
 		// 历史会话仍在全局 encoded-cwd 目录
 		const legacyDir = join(
 			home,
-			".pi",
+			".sd",
 			"agent",
 			"sessions",
 			`--${projectRoot.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`,
@@ -421,14 +421,14 @@ test("falls back to global sessionDir when project settings omit it", async () =
 	const home = mkdtempSync(join(tmpdir(), "Snacode-global-session-dir-"));
 	const projectRoot = mkdtempSync(join(tmpdir(), "Snacode-global-session-dir-project-"));
 	try {
-		mkdirSync(join(home, ".pi", "agent"), { recursive: true });
+		mkdirSync(join(home, ".sd", "agent"), { recursive: true });
 		writeFileSync(
-			join(home, ".pi", "agent", "settings.json"),
-			JSON.stringify({ sessionDir: ".pi/sessions" }),
+			join(home, ".sd", "agent", "settings.json"),
+			JSON.stringify({ sessionDir: ".sd/agent/sessions" }),
 			"utf8",
 		);
 
-		const localSession = join(projectRoot, ".pi", "sessions", "from-global-config.jsonl");
+		const localSession = join(projectRoot, ".sd", "agent", "sessions", "from-global-config.jsonl");
 		writeSession(localSession, session("From global sessionDir", projectRoot));
 
 		const { SessionScanner } = loadSessionScanner(home);

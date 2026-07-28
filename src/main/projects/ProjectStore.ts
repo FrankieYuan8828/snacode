@@ -304,7 +304,7 @@ export class ProjectStore {
   }
 
   private async save() {
-    // 项目列表是桌面端自己的轻量状态，不写入 pi session，避免影响 pi 原生会话格式。
+    // 项目列表是桌面端自己的轻量状态，不写入 sd session，避免影响 sd 原生会话格式。
     await mkdir(app.getPath("userData"), { recursive: true });
     await writeFile(this.filePath, JSON.stringify(this.projects, null, 2), "utf8");
   }

@@ -33,12 +33,12 @@ function createChildProcess() {
 	return child;
 }
 
-function loadPiProcess(spawnCalls) {
+function loadSdProcess(spawnCalls) {
 	const paths = loadWslPaths();
 	class FakeRpcClient extends EventEmitter {
 		close() {}
 	}
-	class FakePiLocator {}
+	class FakeSdLocator {}
 	const sandbox = {
 		Buffer,
 		console: { log() {}, warn() {}, error() {} },
@@ -58,19 +58,19 @@ function loadPiProcess(spawnCalls) {
 					},
 				};
 			}
-			if (id === "./PiRpcClient") return { PiRpcClient: FakeRpcClient };
-			if (id === "./PiLocator") return { PiLocator: FakePiLocator };
+			if (id === "./SdRpcClient") return { SdRpcClient: FakeRpcClient };
+			if (id === "./SdLocator") return { SdLocator: FakeSdLocator };
 			if (id === "../wsl/WslPaths") return paths;
 			return require(id);
 		},
 	};
-	vm.runInNewContext(transpile("src/main/pi/PiProcess.ts"), sandbox, { filename: "PiProcess.ts" });
+	vm.runInNewContext(transpile("src/main/agent/SdProcess.ts"), sandbox, { filename: "SdProcess.ts" });
 	return sandbox.exports;
 }
 
 function createLocator(invocationCalls) {
 	return {
-		resolveCommand: () => "wsl://Ubuntu-24.04/root/pi",
+		resolveCommand: () => "wsl://Ubuntu-24.04/root/sd",
 		createInvocation: (_command, args, options = {}) => {
 			invocationCalls.push({ args: [...args], options: { ...options } });
 			return {
@@ -79,11 +79,11 @@ function createLocator(invocationCalls) {
 					"-d", "Ubuntu-24.04",
 					"-u", "root",
 					...(options.wslCwd ? ["--cd", options.wslCwd] : []),
-					"pi",
+					"sd",
 					...args,
 				],
 				shell: false,
-				wsl: { distro: "Ubuntu-24.04", user: "root", piCommand: "pi" },
+				wsl: { distro: "Ubuntu-24.04", user: "root", sdCommand: "sd" },
 			};
 		},
 		createProcessEnv: () => ({}),
@@ -94,27 +94,27 @@ const settings = {
 	wslEnabled: true,
 	wslDistro: "Ubuntu-24.04",
 	wslUser: "root",
-	piProxyEnabled: false,
-	piProxyUrl: "",
-	piProxyBypass: "",
+	sdProxyEnabled: false,
+	sdProxyUrl: "",
+	sdProxyBypass: "",
 };
 
-test("starts WSL pi with Linux cwd/session while keeping a Windows-accessible spawn cwd", async () => {
+test("starts WSL sd with Linux cwd/session while keeping a Windows-accessible spawn cwd", async () => {
 	const spawnCalls = [];
 	const invocationCalls = [];
-	const { PiProcess } = loadPiProcess(spawnCalls);
-	const process = new PiProcess(
+	const { SdProcess } = loadSdProcess(spawnCalls);
+	const process = new SdProcess(
 		"//wsl.localhost/Ubuntu-24.04/root/ba_cli",
 		settings,
 		createLocator(invocationCalls),
 	);
 
-	await process.start("\\\\wsl$\\Ubuntu-24.04\\root\\.pi\\agent\\sessions\\session.jsonl");
+	await process.start("\\\\wsl$\\Ubuntu-24.04\\root\\.sd\\agent\\sessions\\session.jsonl");
 
 	assert.equal(invocationCalls[0].options.wslCwd, "/root/ba_cli");
 	assert.deepEqual(
 		invocationCalls[0].args,
-		["--mode", "rpc", "--session", "/root/.pi/agent/sessions/session.jsonl"],
+		["--mode", "rpc", "--session", "/root/.sd/agent/sessions/session.jsonl"],
 	);
 	assert.equal(spawnCalls[0].options.cwd, "\\\\wsl.localhost\\Ubuntu-24.04\\root\\ba_cli");
 	assert.deepEqual(
@@ -123,17 +123,17 @@ test("starts WSL pi with Linux cwd/session while keeping a Windows-accessible sp
 			"-d", "Ubuntu-24.04",
 			"-u", "root",
 			"--cd", "/root/ba_cli",
-			"pi", "--mode", "rpc",
-			"--session", "/root/.pi/agent/sessions/session.jsonl",
+			"sd", "--mode", "rpc",
+			"--session", "/root/.sd/agent/sessions/session.jsonl",
 		],
 	);
 	assert.equal(process.getDiagnostics().cwd, "/root/ba_cli");
 });
 
-test("rejects a project UNC from another distro before spawning pi", async () => {
+test("rejects a project UNC from another distro before spawning sd", async () => {
 	const spawnCalls = [];
-	const { PiProcess } = loadPiProcess(spawnCalls);
-	const process = new PiProcess(
+	const { SdProcess } = loadSdProcess(spawnCalls);
+	const process = new SdProcess(
 		"\\\\wsl.localhost\\Debian\\root\\ba_cli",
 		settings,
 		createLocator([]),

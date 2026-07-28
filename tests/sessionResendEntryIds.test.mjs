@@ -6,7 +6,7 @@ import {
 	collectDescendantEntryIds,
 	findLastUserMessageLine,
 	takeActiveEntryId,
-} from "../src/main/pi/sessionEntryIds.ts";
+} from "../src/main/agent/sessionEntryIds.ts";
 
 function extractText(content) {
 	if (!Array.isArray(content)) return "";

@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+﻿import { Component, type ErrorInfo, type ReactNode } from "react";
 import { t } from "../../i18n";
 import { showNotice } from "../../utils/notice";
 
@@ -35,7 +35,7 @@ export class AppErrorBoundary extends Component<
 			6000,
 			"error",
 		);
-		void window.piDesktop?.app
+		void window.snacodeDesktop?.app
 			.rendererLog("error", "renderer", "React render error boundary caught", {
 				message: error.message,
 				stack: error.stack,

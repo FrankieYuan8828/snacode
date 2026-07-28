@@ -5,7 +5,7 @@ import ts from "typescript";
 import vm from "node:vm";
 
 function loadBashResultModule() {
-	const source = readFileSync("src/main/pi/bashResult.ts", "utf8");
+	const source = readFileSync("src/main/agent/bashResult.ts", "utf8");
 	const { outputText } = ts.transpileModule(source, {
 		compilerOptions: {
 			module: ts.ModuleKind.CommonJS,

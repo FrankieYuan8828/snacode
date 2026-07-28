@@ -243,9 +243,9 @@ export class XuePromptManager {
 	}
 
 	/**
-	 * 导入到 pi 模板
+	 * 导入到 sd 模板
 	 */
-	async importToPi(
+	async importToSd(
 		slug: string,
 		category: string
 	): Promise<PromptTemplateSummary> {

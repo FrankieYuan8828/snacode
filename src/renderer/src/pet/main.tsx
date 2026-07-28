@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
 import { useState, useEffect } from "react";
 import type { PetAggregateState, PetManifest, PetNotification, PetWindowCaps } from "@shared/types";
@@ -23,16 +23,16 @@ function PetApp() {
 			try { setSprite(await loadSpriteSheet(m)); } catch { setSprite(null); }
 			setReady(true);
 		};
-		void window.piDesktop.pet.getCurrent().then(load);
+		void window.snacodeDesktop.pet.getCurrent().then(load);
 		const cleanups = [
-			window.piDesktop.pet.onSprite(load),
-			window.piDesktop.pet.onState(setState),
-			window.piDesktop.pet.onNotify((n) => { setNotif({ ...n, timestamp: performance.now() }); setTimeout(() => setNotif(null), 4000); }),
-			window.piDesktop.pet.onPreviewMode((m: string) => setPreview(m || null)),
-			window.piDesktop.pet.onCaps(setCaps),
+			window.snacodeDesktop.pet.onSprite(load),
+			window.snacodeDesktop.pet.onState(setState),
+			window.snacodeDesktop.pet.onNotify((n) => { setNotif({ ...n, timestamp: performance.now() }); setTimeout(() => setNotif(null), 4000); }),
+			window.snacodeDesktop.pet.onPreviewMode((m: string) => setPreview(m || null)),
+			window.snacodeDesktop.pet.onCaps(setCaps),
 		];
 		// 通知主进程：所有 IPC 监听器已注册，可安全推送初始状态（避免时序竞态）
-		window.piDesktop.pet.ready();
+		window.snacodeDesktop.pet.ready();
 		return () => { cancelled = true; cleanups.forEach(fn => fn?.()); };
 	}, []);
 

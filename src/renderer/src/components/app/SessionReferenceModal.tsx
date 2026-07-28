@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { X, MessageCircle, Brain, FileText } from "lucide-react";
 import { t } from "../../i18n";
 import type { SessionSummary } from "../../../../shared/types";
@@ -163,7 +163,7 @@ export function SessionReferenceModal(props: {
 									>
 										<Brain size={15} className="multi-select-node-icon assistant" />
 										<span className="multi-select-node-label">
-											<span className="multi-select-node-run-label">pi</span>
+											<span className="multi-select-node-run-label">sd</span>
 											<span className="multi-select-node-time">
 												{formatTime(item.msgs[item.msgs.length - 1]?.timestamp ?? 0)}
 											</span>

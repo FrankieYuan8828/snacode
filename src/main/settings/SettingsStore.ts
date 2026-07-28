@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from "electron";
+﻿import { app, BrowserWindow, Menu } from "electron";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,11 +10,11 @@ function piAgentSettingsPath() {
 }
 
 /**
- * 读取 pi agent 的 settings.json 并从中提取 showThinking（取 hideThinkingBlock 的反值）。
- * pi CLI 的 hideThinkingBlock 语义：true=隐藏思考，false=显示思考。
+ * 读取 sd agent 的 settings.json 并从中提取 showThinking（取 hideThinkingBlock 的反值）。
+ * sd CLI 的 hideThinkingBlock 语义：true=隐藏思考，false=显示思考。
  * 桌面端 showThinking 语义：true=显示，false=隐藏。
  * 映射：showThinking = !hideThinkingBlock
- * 若 pi agent 文件不存在或 hideThinkingBlock 未设置，返回 undefined。
+ * 若 sd agent 文件不存在或 hideThinkingBlock 未设置，返回 undefined。
  */
 function readPiAgentShowThinking(): boolean | undefined {
 	try {
@@ -36,7 +36,7 @@ const defaultSettings: AppSettings = {
   theme: "system",
   lightBackground: "white",
   language: "system",
-  piEnvironmentChecked: false,
+  sdEnvironmentChecked: false,
   enableGitManagement: true,
   gitCommitMessagePrompt: `请根据以下 git diff 生成一条中文 git commit message。
 
@@ -61,13 +61,13 @@ Gitmoji 对应关系：
   enableNotifications: true,
   showThinking: readPiAgentShowThinking() ?? true,
   showDevTools: false,
-  piProxyEnabled: false,
-  piProxyUrl: "http://127.0.0.1:7890",
-  piProxyBypass: "localhost,127.0.0.1,::1",
+  sdProxyEnabled: false,
+  sdProxyUrl: "http://127.0.0.1:7890",
+  sdProxyBypass: "localhost,127.0.0.1,::1",
   desktopProxyEnabled: false,
   desktopProxyUrl: "http://127.0.0.1:7890",
   desktopProxyBypass: "localhost,127.0.0.1,::1",
-  customPiPath: "",
+  customSdPath: "",
   wslEnabled: false,
   wslDistro: "Ubuntu",
   wslUser: "root",
@@ -94,6 +94,9 @@ Gitmoji 对应关系：
 
   // ── 更新检测：默认正常检测，用户可手动关闭忽略更新 ──
   disableUpdateCheck: false,
+
+  // 默认项目信任策略：ask（询问用户）
+  defaultProjectTrust: "ask",
 
   // 字体配置：默认值保证与历史版本行为一致，零回归
   fontSize: "default",
@@ -126,7 +129,7 @@ export class SettingsStore {
     } catch {
       this.settings = { ...defaultSettings };
     }
-    // showThinking 不再作为可持久化的独立配置项，完全跟随 pi agent 的 hideThinkingBlock。
+    // showThinking 不再作为可持久化的独立配置项，完全跟随 sd agent 的 hideThinkingBlock。
     // 启动时重新读取以确保每次启动都使用最新值，而非缓存的 defaultSettings。
     const computedShowThinking = readPiAgentShowThinking();
     if (computedShowThinking !== undefined) {
@@ -140,7 +143,7 @@ export class SettingsStore {
   }
 
   get() {
-    // showThinking 由 pi agent 的 hideThinkingBlock 动态决定，每次 get() 都重新读取
+    // showThinking 由 sd agent 的 hideThinkingBlock 动态决定，每次 get() 都重新读取
     const computed = readPiAgentShowThinking();
     if (computed !== undefined) {
       return { ...this.settings, showThinking: computed };
@@ -149,7 +152,7 @@ export class SettingsStore {
   }
 
   async update(patch: Partial<AppSettings>) {
-    // showThinking 完全由 pi agent 的 hideThinkingBlock 控制，不允许通过桌面设置修改
+    // showThinking 完全由 sd agent 的 hideThinkingBlock 控制，不允许通过桌面设置修改
     const { showThinking: _, ...safePatch } = patch;
     this.settings = { ...this.settings, ...safePatch };
     await this.save();
@@ -158,7 +161,7 @@ export class SettingsStore {
   }
 
   applyMenu() {
-    // 菜单属于 Electron 外壳设置，不影响 pi agent；默认隐藏以获得更接近独立工具的观感。
+    // 菜单属于 Electron 外壳设置，不影响 sd agent；默认隐藏以获得更接近独立工具的观感。
     if (this.settings.showNativeMenu) {
       Menu.setApplicationMenu(null);
     } else {
@@ -199,7 +202,7 @@ export class SettingsStore {
 
   private async save() {
     await mkdir(app.getPath("userData"), { recursive: true });
-    // showThinking 由 pi agent 的 hideThinkingBlock 决定，不持久化到桌面 settings.json
+    // showThinking 由 sd agent 的 hideThinkingBlock 决定，不持久化到桌面 settings.json
     const { showThinking: _unused, ...persistable } = this.settings;
     await writeFile(this.filePath, JSON.stringify(persistable, null, 2), "utf8");
   }
@@ -237,3 +240,4 @@ export class SettingsStore {
     await this.save();
   }
 }
+

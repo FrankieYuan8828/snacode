@@ -131,11 +131,11 @@ export function ImTab(_props: Props) {
 	const [guideAnimating, setGuideAnimating] = useState(false);
 	const [connecting, setConnecting] = useState(false);
 
-	const api = (window as unknown as { piDesktop?: { feishu?: FeishuApiRaw } }).piDesktop?.feishu;
+	const api = (window as unknown as { snacodeDesktop?: { feishu?: FeishuApiRaw } }).snacodeDesktop?.feishu;
 
 	/** 使用主进程能力打开外部链接；force=true 强制系统浏览器（如飞书登录/指南页不适合内置浏览器）。 */
 	const openExternal = useCallback(async (url: string, forceSystem?: boolean) => {
-		const appApi = (window as unknown as { piDesktop?: { app?: { openExternal: (u: string, forceSystem?: boolean) => Promise<void> } } }).piDesktop?.app;
+		const appApi = (window as unknown as { snacodeDesktop?: { app?: { openExternal: (u: string, forceSystem?: boolean) => Promise<void> } } }).snacodeDesktop?.app;
 		if (appApi?.openExternal) {
 			await appApi.openExternal(url, forceSystem);
 		} else {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ArrowLeft,
 	ArrowRight,
@@ -238,7 +238,7 @@ export function BrowserPanel(props: {
 				navigateTo(evt.url);
 			} else {
 				// 非 http 协议（mailto: 等）走系统默认浏览器
-				void window.piDesktop.browser.openExternal(evt.url);
+				void window.snacodeDesktop.browser.openExternal(evt.url);
 			}
 		};
 

@@ -1,24 +1,24 @@
----
+﻿---
 layout: home
 
 hero:
   name: Snacode
-  text: 多项目 pi Agent 桌面工作台
-  tagline: 在统一的桌面工作区中管理本地 pi 编码助手会话、配置、Git 和终端，支持 Windows、macOS、Linux，让本地 AI 编码工作流更稳定高效。
+  text: 多项目 sd Agent 桌面工作台
+  tagline: 在统一的桌面工作区中管理本地 sd 编码助手会话、配置、Git 和终端，支持 Windows、macOS、Linux，让本地 AI 编码工作流更稳定高效。
   actions:
     - theme: brand
       text: 下载最新版本
-      link: https://github.com/ayuayue/Snacode/releases
+      link: https://github.com/FrankieYuan8828/snacode/releases
     - theme: alt
       text: 快速开始
       link: /guide/getting-started
     - theme: alt
       text: 查看 GitHub
-      link: https://github.com/ayuayue/Snacode
+      link: https://github.com/FrankieYuan8828/snacode
 
 features:
   - title: 多项目工作区
-    details: 添加、搜索、拖动排序和切换本地项目目录，每个 Agent 会话都保持项目级隔离，同时运行多个 pi Agent。
+    details: 添加、搜索、拖动排序和切换本地项目目录，每个 Agent 会话都保持项目级隔离，同时运行多个 sd Agent。
   - title: 会话历史与恢复
     details: 恢复历史会话，按时间线查看工具调用和回答细节，并回放历史会话中的修改内容，支持 Codex 和 Claude 会话导入。
   - title: Git 集成
@@ -44,12 +44,12 @@ features:
 
 ## 面向本地开发的桌面控制台
 
-`Snacode` 不是 pi 的分支。它是一个轻量 Electron 外壳，通过启动多个 `pi --mode rpc` 进程，把项目管理、会话管理、配置管理和桌面交互整合起来，Agent 能力仍由 pi 原生提供。
+`Snacode` 不是 sd 的分支。它是一个轻量 Electron 外壳，通过启动多个 `sd --mode rpc` 进程，把项目管理、会话管理、配置管理和桌面交互整合起来，Agent 能力仍由 sd 原生提供。
 
 <div class="info-strip">
   <div>
     <strong>一个 Agent Tab</strong>
-    一个独立 pi RPC 进程，避免不同项目和对话互相污染。
+    一个独立 sd RPC 进程，避免不同项目和对话互相污染。
   </div>
   <div>
     <strong>一个工作台</strong>

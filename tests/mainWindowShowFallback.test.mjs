@@ -22,7 +22,7 @@ test("main window records renderer load diagnostics", () => {
 	assert.match(source, /details\.reason === "clean-exit"/);
 	assert.match(source, /Main window renderer process gone/);
 	assert.match(source, /mainWindow\.webContents\.on\("dom-ready"/);
-	assert.match(source, /Boolean\(window\.piDesktop\)/);
+	assert.match(source, /Boolean\(window\.snacodeDesktop\)/);
 	assert.match(source, /Main window preload API availability/);
 	assert.match(source, /mainWindow\.webContents\.on\(\s*"console-message"/);
 	assert.match(source, /event\.level/);

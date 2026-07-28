@@ -1,4 +1,4 @@
-// @ts-nocheck - extracted from AppParts, pre-existing type issues
+﻿// @ts-nocheck - extracted from AppParts, pre-existing type issues
 import { Component, useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import {
 	Settings2,
@@ -15,7 +15,7 @@ import { Button } from "../ui/Button";
 import { CloseIconButton, IconButton } from "../ui/IconButton";
 import { SelectField } from "../ui/SelectField";
 import { TextField } from "../ui/TextField";
-import type { AppSettings, AppInfo, PiInstallStatus, PiUpdateCheckResult, PiCliUpdateResult, PetManifest } from "../../../shared/types";
+import type { AppSettings, AppInfo, AgentInstallStatus, UpdateCheckResult, CliUpdateResult, PetManifest } from "../../../shared/types";
 import { GRID_COLS, CELL_W, CELL_H, MODE_ROW, MODE_FRAMES } from "../../pet/PetSpriteSheet";
 
 const ZOOM_FACTOR_MIN = 0.8;
@@ -26,9 +26,9 @@ type SettingsTabId = "common" | "appearance" | "proxy" | "dev" | "pet" | "storag
 
 /** 代理相关字段：用于判断代理 tab 是否有未保存变更。 */
 const PROXY_FIELDS: (keyof AppSettings)[] = [
-	"piProxyEnabled",
-	"piProxyUrl",
-	"piProxyBypass",
+	"sdProxyEnabled",
+	"sdProxyUrl",
+	"sdProxyBypass",
 	"desktopProxyEnabled",
 	"desktopProxyUrl",
 	"desktopProxyBypass",
@@ -126,29 +126,29 @@ function DirtyMarker(props: { dirty: boolean; label: string }) {
 
 type SettingsModalProps = {
 	settings: AppSettings;
-	piStatus: PiInstallStatus | null;
-	piChecking: boolean;
-	piProxyChecking: boolean;
-	piProxyNotice: string;
-	piProxyNoticeTone: "info" | "success" | "error";
+	agentStatus: AgentInstallStatus | null;
+	sdChecking: boolean;
+	agentProxyChecking: boolean;
+	agentProxyNotice: string;
+	agentProxyNoticeTone: "info" | "success" | "error";
 	webServiceChanging: boolean;
 	appInfo: AppInfo;
-	customPiPath: string;
+	customSdPath: string;
 	customPathValidating: boolean;
-	customPathResult: PiInstallStatus | null;
+	customPathResult: AgentInstallStatus | null;
 	updateChecking: boolean;
-	piUpdating: boolean;
-	piUpdateChecking: boolean;
-	piUpdateCheck: PiUpdateCheckResult | null;
-	piUpdateResult: PiCliUpdateResult | null;
+	agentUpdating: boolean;
+	sdUpdateChecking: boolean;
+	sdUpdateCheck: UpdateCheckResult | null;
+	sdUpdateResult: CliUpdateResult | null;
 	onCustomPathChange: (path: string) => void;
 	onValidateCustomPath: () => void;
 	onClearCustomPath: () => void;
-	onCheckPi: () => void;
-	onTestPiProxy: () => void;
+	onCheckAgent: () => void;
+	onTestAgentProxy: () => void;
 	onCheckUpdate: () => void;
-	onCheckPiUpdate: () => void;
-	onUpdatePi: () => void;
+	onCheckAgentUpdate: () => void;
+	onUpdateAgent: () => void;
 	onToggleDevTools: () => void;
 	onRestartApp: () => void;
 	onClearCheckFlag?: () => void;
@@ -294,7 +294,7 @@ function SettingsModalContent(props: SettingsModalProps) {
 			draftSettings.inputFontSize !== null,
 	);
 	const [webPortDraft, setWebPortDraft] = useState(String(draftSettings.webServicePort));
-	const piPath = props.settings.customPiPath || props.piStatus?.command || "";
+	const sdPath = props.settings.customSdPath || props.sdStatus?.command || "";
 	const changeZoomFactor = (delta: number) => {
 		const next = Math.min(
 			ZOOM_FACTOR_MAX,
@@ -333,15 +333,15 @@ function SettingsModalContent(props: SettingsModalProps) {
 	const [wslValidation, setWslValidation] = useState<{
 		ok: boolean;
 		whoami: string;
-		piVersion: string;
+		sdVersion: string;
 		error: string;
 	} | null>(null);
 	// WSL 发行版列表懒加载（仅 Windows + WSL 开启时拉取，无论成败只拉一次）
 	useEffect(() => {
 		const isWin = props.appInfo.platform === "win32";
-		if (isWin && draftSettings.wslEnabled && !wslDistrosAttempted && !wslDistrosLoading && window.piDesktop.wsl) {
+		if (isWin && draftSettings.wslEnabled && !wslDistrosAttempted && !wslDistrosLoading && window.snacodeDesktop.wsl) {
 			setWslDistrosLoading(true);
-			window.piDesktop.wsl
+			window.snacodeDesktop.wsl
 				.listDistros()
 				.then((list) => { setWslDistros(list); setWslDistrosAttempted(true); })
 				.catch(() => { setWslDistros([]); setWslDistrosAttempted(true); })
@@ -354,21 +354,21 @@ function SettingsModalContent(props: SettingsModalProps) {
 		: [{ value: draftSettings.wslDistro, label: draftSettings.wslDistro }];
 
 	const handleValidateWslUser = async () => {
-		if (!window.piDesktop.wsl) {
-			setWslValidation({ ok: false, whoami: "", piVersion: "", error: "WSL API 未就绪，请重启应用后再试" });
+		if (!window.snacodeDesktop.wsl) {
+			setWslValidation({ ok: false, whoami: "", sdVersion: "", error: "WSL API 未就绪，请重启应用后再试" });
 			return;
 		}
 		setWslValidating(true);
 		setWslValidation(null);
 		try {
-			const result = await window.piDesktop.wsl.validateConnection(draftSettings.wslDistro, wslUserInput);
+			const result = await window.snacodeDesktop.wsl.validateConnection(draftSettings.wslDistro, wslUserInput);
 			setWslValidation(result);
 			if (result.ok) {
 				// 验证通过后，将用户输入写入 draft
 				updateDraft({ wslUser: wslUserInput });
 			}
 		} catch (err) {
-			setWslValidation({ ok: false, whoami: "", piVersion: "", error: String(err) });
+			setWslValidation({ ok: false, whoami: "", sdVersion: "", error: String(err) });
 		} finally {
 			setWslValidating(false);
 		}
@@ -378,17 +378,17 @@ function SettingsModalContent(props: SettingsModalProps) {
 	const [petOptions, setPetOptions] = useState<{ value: string; label: string }[]>([]);
 	const [petList, setPetList] = useState<PetManifest[]>([]);
 	useEffect(() => {
-		window.piDesktop.pet
+		window.snacodeDesktop.pet
 			.list()
 			.then((pets) => { setPetList(pets); setPetOptions(pets.map((p) => ({ value: p.id, label: p.displayName }))); })
 			.catch(() => undefined);
 	}, []);
-	// 进入开发设置 tab 时，若 piStatus 为空则自动检测（避免每次需手动点击「检测环境」）
+	// 进入开发设置 tab 时，若 sdStatus 为空则自动检测（避免每次需手动点击「检测环境」）
 	useEffect(() => {
-		if (activeTab === "dev" && props.piStatus === null && !props.piChecking) {
-			props.onCheckPi();
+		if (activeTab === "dev" && props.sdStatus === null && !props.sdChecking) {
+			props.onCheckSd();
 		}
-	}, [activeTab, props.piStatus, props.piChecking, props.onCheckPi]);
+	}, [activeTab, props.sdStatus, props.sdChecking, props.onCheckSd]);
 	const [petPreviewMode, setPetPreviewMode] = useState("__auto");
 
 	const applyWebPortDraft = () => {
@@ -861,30 +861,30 @@ function SettingsModalContent(props: SettingsModalProps) {
 									<SettingSwitch
 										title={t("settings.enablePiProxy")}
 										description={t("settings.settingTakesEffectAfterRestart")}
-										checked={draftSettings.piProxyEnabled}
+										checked={draftSettings.sdProxyEnabled}
 										onChange={(checked) =>
-											updateDraft({ piProxyEnabled: checked })
+											updateDraft({ sdProxyEnabled: checked })
 										}
 									/>
-									{draftSettings.piProxyEnabled && (
+									{draftSettings.sdProxyEnabled && (
 										<div className="setting-proxy-panel">
 											<TextField
 												className="setting-field"
 												label={t("settings.proxyUrl")}
-												value={draftSettings.piProxyUrl}
+												value={draftSettings.sdProxyUrl}
 												placeholder="http://127.0.0.1:7890"
 												onChange={(value) =>
-													updateDraft({ piProxyUrl: value })
+													updateDraft({ sdProxyUrl: value })
 												}
 											/>
 											<TextField
 												className="setting-field"
 												label={t("settings.proxyBypass")}
-												value={draftSettings.piProxyBypass}
+												value={draftSettings.sdProxyBypass}
 												placeholder="localhost,127.0.0.1,::1"
 												description={t("settings.noProxyHint")}
 												onChange={(value) =>
-													updateDraft({ piProxyBypass: value })
+													updateDraft({ sdProxyBypass: value })
 												}
 											/>
 											<div className="setting-row">
@@ -952,38 +952,38 @@ function SettingsModalContent(props: SettingsModalProps) {
 						{activeTab === "dev" && (
 							<>
 								<SettingsSection title={t("settings.environment")}>
-									{/* Pi CLI 状态：安装检测 + 路径信息 + 重新检测 */}
-									<div className="setting-pi-status">
-										<div className="setting-pi-status-indicator">
+									{/* sd CLI 状态：安装检测 + 路径信息 + 重新检测 */}
+									<div className="setting-sd-status">
+										<div className="setting-sd-status-indicator">
 											<span
-												className={"pi-status-dot " + (props.piStatus?.installed ? "online" : "offline")}
+												className={"sd-status-dot " + (props.sdStatus?.installed ? "online" : "offline")}
 											/>
-											<div className="setting-pi-status-text">
-												<strong>Pi CLI</strong>
+											<div className="setting-sd-status-text">
+												<strong>sd CLI</strong>
 												<span>
-													{props.piStatus
-														? props.piStatus.installed
+													{props.sdStatus
+														? props.sdStatus.installed
 															? t("settings.foundPi", {
-																	version: props.piStatus.version ?? "pi",
+																	version: props.sdStatus.version ?? "sd",
 																})
-															: t("settings.piMissing")
+															: t("settings.sdMissing")
 														: t("settings.piCliAvailable")}
 												</span>
-												{piPath && (
+												{sdPath && (
 													<span className="setting-path">
-														{piPath}
+														{sdPath}
 													</span>
 												)}
-												{props.piStatus && !props.piStatus.installed && props.piStatus.error && (
+												{props.sdStatus && !props.sdStatus.installed && props.sdStatus.error && (
 													<span className="setting-status error">
-														{props.piStatus.error}
+														{props.sdStatus.error}
 													</span>
 												)}
 											</div>
 										</div>
 										<div className="setting-inline-actions">
-											<Button onClick={props.onCheckPi} disabled={props.piChecking}>
-												{props.piChecking
+											<Button onClick={props.onCheckSd} disabled={props.sdChecking}>
+												{props.sdChecking
 													? t("settings.detecting")
 													: t("settings.detectEnvironment")}
 											</Button>
@@ -996,38 +996,38 @@ function SettingsModalContent(props: SettingsModalProps) {
 												</Button>
 											)}
 											<Button
-												onClick={props.onCheckPiUpdate}
-												loading={props.piUpdateChecking}
+												onClick={props.onCheckSdUpdate}
+												loading={props.sdUpdateChecking}
 												disabled={draftSettings.disableUpdateCheck}
 											>
-												{t("settings.checkPiUpdate")}
+												{t("settings.checkSdUpdate")}
 											</Button>
 											<Button
 												onClick={props.onUpdatePi}
 												loading={props.piUpdating}
 												disabled={
 													draftSettings.disableUpdateCheck ||
-													!props.piUpdateCheck?.hasUpdate
+													!props.sdUpdateCheck?.hasUpdate
 												}
 											>
 												{t("settings.updatePi")}
 											</Button>
 										</div>
 									</div>
-									{props.piUpdateResult && (
+									{props.sdUpdateResult && (
 										<pre className="setting-update-output">
-											{props.piUpdateResult.command}
+											{props.sdUpdateResult.command}
 											{"\n"}
-											{props.piUpdateResult.output}
+											{props.sdUpdateResult.output}
 										</pre>
 									)}
 
 									<hr className="setting-divider" />
 
-									{/* Pi 来源：Windows 原生 / WSL（仅 Windows 可见） */}
+									{/* sd 来源：Windows 原生 / WSL（仅 Windows 可见） */}
 									{props.appInfo.platform === "win32" && (
-									<div className="setting-pi-source-block">
-										<div className="setting-pi-source-row">
+									<div className="setting-sd-source-block">
+										<div className="setting-sd-source-row">
 											<span>{t("settings.piSource.label")}</span>
 											<SelectField
 												value={draftSettings.wslEnabled ? "wsl" : "windows"}
@@ -1042,7 +1042,7 @@ function SettingsModalContent(props: SettingsModalProps) {
 											/>
 										</div>
 										{draftSettings.wslEnabled && (
-											<div className="setting-pi-wsl-config">
+											<div className="setting-sd-wsl-config">
 												<div className="setting-wsl-fields">
 													{wslDistros.length > 0 ? (
 														<SelectField
@@ -1101,9 +1101,9 @@ function SettingsModalContent(props: SettingsModalProps) {
 																		distro: draftSettings.wslDistro,
 																	})}
 																</small>
-																{wslValidation.piVersion ? (
+																{wslValidation.sdVersion ? (
 																	<small className="setting-status success">
-																		{t("settings.wsl.piDetected", { version: wslValidation.piVersion })}
+																		{t("settings.wsl.sdDetected", { version: wslValidation.sdVersion })}
 																	</small>
 																) : (
 																	<small className="setting-status warning">
@@ -1123,24 +1123,24 @@ function SettingsModalContent(props: SettingsModalProps) {
 
 									<hr className="setting-divider" />
 
-									{/* 自定义 Pi 路径 */}
-									<div className="setting-pi-path-panel">
+									{/* 自定义 sd 路径 */}
+									<div className="setting-sd-path-panel">
 										<TextField
 											className="setting-field"
-											label={t("settings.customPiPath")}
-											value={props.customPiPath}
+											label={t("settings.customSdPath")}
+											value={props.customSdPath}
 											placeholder={
-												piPath ||
-												"D:\\mise-data\\installs\\node\\24 13 0\\pi.cmd"
+												sdPath ||
+												"C:\\Users\\YourName\\AppData\\Roaming\\npm\\sd.cmd"
 											}
-											description={t("settings.customPiPathHint")}
+											description={t("settings.customSdPathHint")}
 											disabled={props.customPathValidating}
 											onChange={props.onCustomPathChange}
 										/>
-										<div className="setting-pi-path-actions">
+										<div className="setting-sd-path-actions">
 											<Button
 												onClick={props.onValidateCustomPath}
-												disabled={!props.customPiPath.trim() || props.customPathValidating}
+												disabled={!props.customSdPath.trim() || props.customPathValidating}
 											>
 												{props.customPathValidating
 													? t("settings.validating")
@@ -1148,7 +1148,7 @@ function SettingsModalContent(props: SettingsModalProps) {
 											</Button>
 											<Button
 												onClick={props.onClearCustomPath}
-												disabled={!props.settings.customPiPath || props.customPathValidating}
+												disabled={!props.settings.customSdPath || props.customPathValidating}
 											>
 												{t("settings.clearCustomPiPath")}
 											</Button>
@@ -1160,7 +1160,7 @@ function SettingsModalContent(props: SettingsModalProps) {
 															value:
 																props.customPathResult.command ??
 																props.customPathResult.version ??
-																"pi",
+																"sd",
 														})
 													: t("settings.validateFailed", {
 															error:
@@ -1414,20 +1414,20 @@ function SettingsModalContent(props: SettingsModalProps) {
 										]}
 										onChange={(value) => {
 											setPetPreviewMode(value);
-											void window.piDesktop.pet.setPreviewMode(value === "__auto" ? "" : value);
+											void window.snacodeDesktop.pet.setPreviewMode(value === "__auto" ? "" : value);
 										}}
 									/>
 									<div className="setting-inline-actions pet-test-actions">
 										<Button
 											buttonSize="sm"
 											variant="danger"
-											onClick={() => void window.piDesktop.pet.testNotify("error")}
+											onClick={() => void window.snacodeDesktop.pet.testNotify("error")}
 										>
 											{t("settings.pet.testError")}
 										</Button>
 										<Button
 											buttonSize="sm"
-											onClick={() => void window.piDesktop.pet.testNotify("done")}
+											onClick={() => void window.snacodeDesktop.pet.testNotify("done")}
 										>
 											{t("settings.pet.testDone")}
 										</Button>
@@ -1553,7 +1553,7 @@ function StorageTab(props: {
 	useEffect(() => {
 		let mounted = true;
 		const refresh = () => {
-			void window.piDesktop.logs.getSize().then((bytes) => {
+			void window.snacodeDesktop.logs.getSize().then((bytes) => {
 				if (mounted) setLogsSize(formatBytes(bytes));
 			});
 		};
@@ -1565,7 +1565,7 @@ function StorageTab(props: {
 	useEffect(() => {
 		let mounted = true;
 		const refresh = () => {
-			void window.piDesktop.rpcLogs.getSize().then((bytes) => {
+			void window.snacodeDesktop.rpcLogs.getSize().then((bytes) => {
 				if (mounted) setRpcLogsSize(formatBytes(bytes));
 			});
 		};
@@ -1579,12 +1579,12 @@ function StorageTab(props: {
 		setFeedback("");
 		try {
 			if (target === "app") {
-				await window.piDesktop.logs.clear();
+				await window.snacodeDesktop.logs.clear();
 			} else if (target === "rpc") {
-				await window.piDesktop.rpcLogs.clear();
+				await window.snacodeDesktop.rpcLogs.clear();
 			} else {
-				await window.piDesktop.logs.clear();
-				await window.piDesktop.rpcLogs.clear();
+				await window.snacodeDesktop.logs.clear();
+				await window.snacodeDesktop.rpcLogs.clear();
 			}
 			setFeedback(t("settings.storage.clearSuccess"));
 		} catch (e) {
@@ -1604,7 +1604,7 @@ function StorageTab(props: {
 
 	const handleOpenFolder = async () => {
 		try {
-			await window.piDesktop.logs.openFolder();
+			await window.snacodeDesktop.logs.openFolder();
 		} catch (e) {
 			setFeedback(`${t("common.error")}: ${e instanceof Error ? e.message : String(e)}`);
 		}

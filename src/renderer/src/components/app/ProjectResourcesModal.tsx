@@ -12,7 +12,7 @@ import type {
 } from "../../../../shared/types";
 import { t } from "../../i18n";
 
-type ProjectResourcesApi = typeof window.piDesktop.projectResources;
+type ProjectResourcesApi = typeof window.snacodeDesktop.projectResources;
 
 type ProjectResourceTab = "skills" | "extensions" | "prompts";
 
@@ -56,7 +56,7 @@ export function ProjectResourcesModal(props: {
 	const [renamingSkill, setRenamingSkill] = useState<string | null>(null);
 	const [renameSkillValue, setRenameSkillValue] = useState("");
 	const [renameSkillBusy, setRenameSkillBusy] = useState(false);
-	const api = (window as unknown as { piDesktop: { projectResources: ProjectResourcesApi } }).piDesktop.projectResources;
+	const api = (window as unknown as { snacodeDesktop: { projectResources: ProjectResourcesApi } }).snacodeDesktop.projectResources;
 
 	const refresh = useMemo(
 		() => async (showToast?: boolean) => {
@@ -79,7 +79,7 @@ export function ProjectResourcesModal(props: {
 		setPromptsLoading(true);
 		setError(null);
 		try {
-			const result = await window.piDesktop.prompts.listByProject(props.project.path);
+			const result = await window.snacodeDesktop.prompts.listByProject(props.project.path);
 			setPrompts(result.templates);
 		} catch (err) {
 			setPrompts([]);
@@ -137,7 +137,7 @@ export function ProjectResourcesModal(props: {
 				// 用文件名删除项目级 prompt
 				const fileName = deleteTarget.item.path.split(/[/\\]/).pop();
 				if (fileName) {
-					await window.piDesktop.prompts.deleteFromProject(props.project.path, fileName);
+					await window.snacodeDesktop.prompts.deleteFromProject(props.project.path, fileName);
 				}
 			}
 			setDeleteTarget(null);
@@ -175,7 +175,7 @@ export function ProjectResourcesModal(props: {
 		setEditLoading(true);
 		setError(null);
 		try {
-			const content = await window.piDesktop.files.readContent(skill.path);
+			const content = await window.snacodeDesktop.files.readContent(skill.path);
 			setEditContent(content);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -191,7 +191,7 @@ export function ProjectResourcesModal(props: {
 		setEditSaving(true);
 		setError(null);
 		try {
-			await window.piDesktop.files.writeContent(editingSkill.path, editContent);
+			await window.snacodeDesktop.files.writeContent(editingSkill.path, editContent);
 			setEditSaved(true);
 			window.setTimeout(() => setEditSaved(false), 2000);
 			// 保存后刷新列表，让 readSkill 读到最新 frontmatter
@@ -261,7 +261,7 @@ export function ProjectResourcesModal(props: {
 		setCreatingPrompt(true);
 		setError(null);
 		try {
-			await window.piDesktop.prompts.createInProject(props.project.path, {
+			await window.snacodeDesktop.prompts.createInProject(props.project.path, {
 				name: newPromptName.trim(),
 				description: newPromptDescription.trim(),
 			});
@@ -282,7 +282,7 @@ export function ProjectResourcesModal(props: {
 		setEditProjectPromptSaved(false);
 		setError(null);
 		try {
-			const content = await window.piDesktop.files.readContent(prompt.path);
+			const content = await window.snacodeDesktop.files.readContent(prompt.path);
 			setEditProjectPromptContent(content);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
@@ -297,7 +297,7 @@ export function ProjectResourcesModal(props: {
 		setEditProjectPromptSaving(true);
 		setError(null);
 		try {
-			await window.piDesktop.files.writeContent(editingProjectPrompt.path, editProjectPromptContent);
+			await window.snacodeDesktop.files.writeContent(editingProjectPrompt.path, editProjectPromptContent);
 			setEditProjectPromptSaved(true);
 			window.setTimeout(() => setEditProjectPromptSaved(false), 2000);
 			await loadPrompts();

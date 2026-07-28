@@ -1,14 +1,14 @@
 /**
  * Provider baseUrl 路径规则：
  * - 桌面端「获取模型 / 测试连接」会为 OpenAI 兼容协议自动尝试补齐 /v1
- * - pi 会话运行时会**原样**使用 models.json 里的 baseUrl，不会再补版本路径
+ * - sd 会话运行时会**原样**使用 models.json 里的 baseUrl，不会再补版本路径
  * 因此检测通过但根路径配置可能导致会话 404。
  *
  * 策略：检测若实际走通版本路径，则建议（并可由 UI 自动）把 baseUrl 写成带版本的地址。
  */
 
 /** baseUrl 是否已带 API 版本段（/v1、/v1beta、/api 等）。 */
-export function hasApiVersionPath(baseUrl: string): boolean {
+export function hasAsdVersionPath(baseUrl: string): boolean {
 	const u = baseUrl.replace(/\/+$/, "");
 	return /\/v\d+(alpha|beta)?$|\/api$/.test(u);
 }
@@ -19,7 +19,7 @@ export function hasApiVersionPath(baseUrl: string): boolean {
  */
 export function ensureOpenAiVersionPath(baseUrl: string): string {
 	const u = baseUrl.replace(/\/+$/, "");
-	return hasApiVersionPath(u) ? u : `${u}/v1`;
+	return hasAsdVersionPath(u) ? u : `${u}/v1`;
 }
 
 /**
@@ -53,7 +53,7 @@ export function needsSessionBaseUrlVersionHint(
 ): boolean {
 	if (!configuredBaseUrl.trim()) return false;
 	// 用户已经写了版本路径 → 无需改写
-	if (hasApiVersionPath(configuredBaseUrl)) return false;
+	if (hasAsdVersionPath(configuredBaseUrl)) return false;
 	// 没有实际请求 URL 时，只要配置是根路径就标记（保存前预警）
 	if (!effectiveRequestUrl) return true;
 	// 仅当实际请求用到了版本路径时才改写，避免「根路径 /models 也通了」时误加 /v1

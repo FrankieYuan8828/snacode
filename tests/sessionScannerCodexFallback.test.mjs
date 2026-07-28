@@ -53,7 +53,7 @@ function loadSessionScanner(homePath) {
 	});
 	const codexMeta = loadCodexMetaModule();
 	const messageContent = loadTranspiledModule(
-		"src/main/pi/messageContent.ts",
+		"src/main/agent/messageContent.ts",
 		new Map([["../feishu/docActions", { stripFeishuDocActionHint: (text) => text }]]),
 	);
 	const sessionSummaryCache = loadTranspiledModule(
@@ -68,7 +68,7 @@ function loadSessionScanner(homePath) {
 				return { app: { getPath: () => homePath } };
 			}
 			if (id === "../../shared/codexSessionMeta") return codexMeta;
-			if (id === "../pi/messageContent") return messageContent;
+			if (id === "../agent/messageContent") return messageContent;
 			if (id === "./sessionSummaryCache") return sessionSummaryCache;
 			if (id === "../wsl/WslPaths") return wslPaths;
 			return require(id);
@@ -84,9 +84,9 @@ test("backfills Codex subagent metadata for sessions imported before grouping fi
 	const home = mkdtempSync(join(tmpdir(), "Snacode-session-scanner-"));
 	try {
 		const projectPath = "/repo/project";
-		const piDir = join(home, ".pi", "agent", "sessions", "--repo-project--");
+		const sdDir = join(home, ".sd", "agent", "sessions", "--repo-project--");
 		const codexDir = join(home, ".codex", "sessions", "2026", "06", "30");
-		mkdirSync(piDir, { recursive: true });
+		mkdirSync(sdDir, { recursive: true });
 		mkdirSync(codexDir, { recursive: true });
 
 		const codexSourcePath = join(codexDir, "rollout-child.jsonl");

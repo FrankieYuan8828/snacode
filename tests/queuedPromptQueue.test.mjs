@@ -19,7 +19,7 @@ const toolRuntimeStateSource = readFileSync(
   "src/shared/toolRuntimeState.ts",
   "utf8",
 );
-const agentManagerSource = readFileSync("src/main/pi/AgentManager.ts", "utf8");
+const agentManagerSource = readFileSync("src/main/agent/AgentManager.ts", "utf8");
 const webServiceSource = readFileSync(
   "src/main/web/WebServiceManager.ts",
   "utf8",

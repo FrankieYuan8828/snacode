@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { t } from "../i18n";
 
@@ -18,7 +18,7 @@ export function TrustTab(props: {
 	const entries = Object.entries(props.data).sort(([left], [right]) => left.localeCompare(right));
 
 	const addEntry = () => {
-		// trust.json 由 pi 读取，保留用户输入的原生路径分隔符，仅去掉末尾多余斜杠。
+		// trust.json 由 sd 读取，保留用户输入的原生路径分隔符，仅去掉末尾多余斜杠。
 		const path = addPath.trim().replace(/[\\/]+$/, "");
 		if (!path) return;
 		props.onChange({ ...props.data, [path]: true });
@@ -109,3 +109,4 @@ export function TrustTab(props: {
 		</div>
 	);
 }
+

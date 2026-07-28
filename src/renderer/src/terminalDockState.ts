@@ -1,4 +1,4 @@
-export type TerminalDockState = {
+﻿export type TerminalDockState = {
 	open: boolean;
 	collapsed: boolean;
 };

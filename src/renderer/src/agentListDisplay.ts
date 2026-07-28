@@ -9,11 +9,11 @@ export type ProjectChildItem =
 			agent: AgentTab;
 			sortAt: number;
 			/** 该 Agent 对应的会话来源（历史会话激活时从 SessionSummary 传递） */
-			source?: "pi" | "codex" | "claude" | "opencode";
+			source?: "sd" | "codex" | "claude" | "opencode";
 			/** Codex 导入的子会话 */
 			codexSubagents: SessionSummary[];
-			/** pi 原生子会话（pi-subagents 等扩展产生的，通过 parentSessionPath 关联） */
-			piSubagents: SessionSummary[];
+			/** sd 原生子会话（sd-subagents 等扩展产生的，通过 parentSessionPath 关联） */
+			sdSubagents: SessionSummary[];
 	  }
 	| {
 			type: "session";
@@ -22,8 +22,8 @@ export type ProjectChildItem =
 			sortAt: number;
 			/** Codex 导入的子会话 */
 			codexSubagents: SessionSummary[];
-			/** pi 原生子会话（pi-subagents 等扩展产生的，通过 parentSessionPath 关联） */
-			piSubagents: SessionSummary[];
+			/** sd 原生子会话（sd-subagents 等扩展产生的，通过 parentSessionPath 关联） */
+			sdSubagents: SessionSummary[];
 	  };
 
 export type ProjectAgentSessionDisplay = {
@@ -145,8 +145,8 @@ export function getProjectAgentSessionDisplay({
 	const unkeyedSessions: SessionSummary[] = [];
 	const codexSubagentsByParent = new Map<string, SessionSummary[]>();
 
-	// pi 原生子会话分组：按 parentSessionPath（归一化）关联到父会话
-	const piSubagentsByParent = new Map<string, SessionSummary[]>();
+	// sd 原生子会话分组：按 parentSessionPath（归一化）关联到父会话
+	const sdSubagentsByParent = new Map<string, SessionSummary[]>();
 
 	const parentCandidateSessions = sessions.filter(
 		(session) => session.codexThreadSource !== "subagent",
@@ -167,13 +167,13 @@ export function getProjectAgentSessionDisplay({
 			continue;
 		}
 
-		// pi 原生子会话（pi-subagents 等）：按 parentSessionPath 分组，从主列表移除
+		// sd 原生子会话（sd-subagents 等）：按 parentSessionPath 分组，从主列表移除
 		if (session.parentSessionPath) {
 			const parentKey = normalizeSessionPathForCompare(session.parentSessionPath);
 			if (parentKey) {
-				const children = piSubagentsByParent.get(parentKey) ?? [];
+				const children = sdSubagentsByParent.get(parentKey) ?? [];
 				children.push(session);
-				piSubagentsByParent.set(parentKey, children);
+				sdSubagentsByParent.set(parentKey, children);
 				continue;
 			}
 		}
@@ -201,7 +201,7 @@ export function getProjectAgentSessionDisplay({
 	// 子会话启动后也会产生 Agent，但它的唯一视觉入口仍应留在父会话下面。
 	// 仅当父条目确实可见时隐藏对应顶层 Agent；父会话缺失/被搜索过滤时仍允许孤儿 Agent 平铺，避免入口消失。
 	const nestedAgentSessionKeys = new Set<string>();
-	for (const [parentKey, subagents] of piSubagentsByParent) {
+	for (const [parentKey, subagents] of sdSubagentsByParent) {
 		if (!sessionByKey.has(parentKey) && !agentBySessionKey.has(parentKey)) continue;
 		for (const subagent of subagents) {
 			const sessionKey = getSessionKey(subagent.filePath);
@@ -215,12 +215,12 @@ export function getProjectAgentSessionDisplay({
 		}
 	}
 
-	/** 根据父条目的 filePath（归一化）查找其 pi 原生子会话 */
-	const getPiSubagents = (parentFilePath?: string): SessionSummary[] => {
+	/** 根据父条目的 filePath（归一化）查找其 sd 原生子会话 */
+	const getSdSubagents = (parentFilePath?: string): SessionSummary[] => {
 		if (!parentFilePath) return [];
 		const key = normalizeSessionPathForCompare(parentFilePath);
 		if (!key) return [];
-		const found = piSubagentsByParent.get(key) ?? [];
+		const found = sdSubagentsByParent.get(key) ?? [];
 		return found;
 	};
 
@@ -231,7 +231,7 @@ export function getProjectAgentSessionDisplay({
 			agent,
 			sortAt: agent.createdAt,
 			codexSubagents: [],
-			piSubagents: [],
+			sdSubagents: [],
 		})),
 		...[...agentBySessionKey.entries()]
 			.filter(([sessionKey]) => !nestedAgentSessionKeys.has(sessionKey))
@@ -250,7 +250,7 @@ export function getProjectAgentSessionDisplay({
 						: [],
 					// Agent 激活后父会话在 projectSessions 中被滤掉 → linkedSession 可能为 undefined；
 				// 此时仍通过 agent.sessionPath 查找子会话，避免父链接丢失导致子会话降级为孤儿。
-				piSubagents: getPiSubagents(linkedSession?.filePath ?? agent.sessionPath),
+				sdSubagents: getSdSubagents(linkedSession?.filePath ?? agent.sessionPath),
 				};
 			},
 		),
@@ -262,7 +262,7 @@ export function getProjectAgentSessionDisplay({
 				session,
 				sortAt: session.updatedAt,
 				codexSubagents: codexSubagentsByParent.get(getCodexParentKey(session)) ?? [],
-				piSubagents: getPiSubagents(session.filePath),
+				sdSubagents: getSdSubagents(session.filePath),
 			})),
 		...unkeyedSessions.map<ProjectChildItem>((session) => ({
 			type: "session",
@@ -270,7 +270,7 @@ export function getProjectAgentSessionDisplay({
 			session,
 			sortAt: session.updatedAt,
 			codexSubagents: codexSubagentsByParent.get(getCodexParentKey(session)) ?? [],
-			piSubagents: getPiSubagents(session.filePath),
+			sdSubagents: getSdSubagents(session.filePath),
 		})),
 	];
 
@@ -278,7 +278,7 @@ export function getProjectAgentSessionDisplay({
 	// 先收集已被嵌套展示的子会话路径，避免孤儿恢复与嵌套展示同时命中导致重复显示。
 	const nestedSubagentPaths = new Set<string>();
 	for (const child of children) {
-		for (const sa of child.piSubagents) {
+		for (const sa of child.sdSubagents) {
 			nestedSubagentPaths.add(normalizeSessionPathForCompare(sa.filePath) ?? sa.filePath);
 		}
 		for (const sa of child.codexSubagents) {
@@ -295,7 +295,7 @@ export function getProjectAgentSessionDisplay({
 			visibleParentKeys.add(normalizeSessionPathForCompare(child.session.filePath) ?? child.session.filePath);
 		}
 	}
-	for (const [parentKey, orphanSubagents] of piSubagentsByParent) {
+	for (const [parentKey, orphanSubagents] of sdSubagentsByParent) {
 		if (!visibleParentKeys.has(parentKey) && orphanSubagents.length > 0) {
 			for (const orphan of orphanSubagents) {
 				const orphanKey = normalizeSessionPathForCompare(orphan.filePath) ?? orphan.filePath;
@@ -307,7 +307,7 @@ export function getProjectAgentSessionDisplay({
 					session: orphan,
 					sortAt: orphan.updatedAt,
 					codexSubagents: [],
-					piSubagents: [],
+					sdSubagents: [],
 				});
 			}
 		}

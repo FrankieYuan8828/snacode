@@ -1,4 +1,4 @@
----
+﻿---
 title: 贡献者
 ---
 
@@ -12,12 +12,12 @@ title: 贡献者
 <div class="contributors-list">
 
 <div class="contributor-card">
-  <div class="contributor-avatar">EJ</div>
+  <div class="contributor-avatar">FY</div>
   <div class="contributor-info">
-    <strong>1900EasonJin</strong>
-    <span class="contributor-handle">@1900EasonJin</span>
+    <strong>FrankieYuan8828</strong>
+    <span class="contributor-handle">@FrankieYuan8828</span>
     <p>飞书/Lark 远程控制集成 — 双向对话、流式卡片、自动拉群</p>
-    <a href="https://github.com/1900EasonJin" target="_blank" rel="noreferrer">GitHub</a>
+    <a href="https://github.com/FrankieYuan8828" target="_blank" rel="noreferrer">GitHub</a>
   </div>
 </div>
 
@@ -36,7 +36,7 @@ title: 贡献者
   <div class="contributor-info">
     <strong>frostime</strong>
     <span class="contributor-handle">@frostime</span>
-    <p>自定义字体/字号与缩放比例、模型选择器自动滚动、最大推理等级、RPC 扩展 UI 生命周期修复、Pi session_info_changed 事件同步侧边栏标题</p>
+    <p>自定义字体/字号与缩放比例、模型选择器自动滚动、最大推理等级、RPC 扩展 UI 生命周期修复、session_info_changed 事件同步侧边栏标题</p>
     <a href="https://github.com/frostime" target="_blank" rel="noreferrer">GitHub</a>
   </div>
 </div>
@@ -119,4 +119,4 @@ title: 贡献者
 ## 其他贡献
 
 - 所有提交 Issue、反馈建议和帮助推广的用户
-- pi 生态的开发者们
+- sd 生态的开发者们

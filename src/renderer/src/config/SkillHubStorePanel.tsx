@@ -4,7 +4,7 @@ import { Search, Download, ArrowLeft, Check, AlertCircle, X, Trash2, BadgeCheck 
 import { t } from "../i18n";
 import { showNotice } from "../utils/notice";
 import { openInSystemBrowser } from "../utils/openExternal";
-import type { SkillHubItem, SkillHubDetail, SkillHubSearchResult, SkillHubInstallResult, PiSkillListResult } from "../../../shared/types";
+import type { SkillHubItem, SkillHubDetail, SkillHubSearchResult, SkillHubInstallResult, SdSkillListResult } from "../../../shared/types";
 
 const STORAGE_KEY = "skillhub-installed-v1";
 
@@ -45,9 +45,9 @@ function persistInstall(prev: PersistedInstall[], slug: string, name: string): P
 /** 获取本地已安装 skill 名称集合 */
 async function getInstalledNames(): Promise<Set<string>> {
 	try {
-		const piDesktop = (window as any).piDesktop;
-		if (!piDesktop?.skills?.list) return new Set();
-		const list: PiSkillListResult = await piDesktop.skills.list();
+		const snacodeDesktop = (window as any).snacodeDesktop;
+		if (!snacodeDesktop?.skills?.list) return new Set();
+		const list: SkillListResult = await snacodeDesktop.skills.list();
 		return new Set(list.skills.map((s) => s.name.toLowerCase()));
 	} catch {
 		return new Set();
@@ -81,14 +81,14 @@ async function getInstalledSlugsSet(searchItems: SkillHubItem[]): Promise<Set<st
 }
 
 const api = (window as unknown as {
-	piDesktop: {
+	snacodeDesktop: {
 		skillHub: {
 			search: (q: string, limit?: number) => Promise<SkillHubSearchResult>;
 			detail: (slug: string) => Promise<SkillHubDetail | null>;
 			install: (slug: string, installDir: string) => Promise<SkillHubInstallResult>;
 		};
 	};
-}).piDesktop;
+}).snacodeDesktop;
 
 const SUGGESTED_SEARCHES = [
 	"pdf", "ocr", "translate", "code review", "react",

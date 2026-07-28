@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronRight, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { t } from "../i18n";
 import type { ModelItem, ModelsFile } from "./configTypes";
@@ -357,11 +357,11 @@ export function ModelsTab(props: {
 
 						<p className="config-auth-guide-note">
 							{t("config.providerGuideNote")}{" "}
-							<a href="https://pi.dev/docs/latest/models" target="_blank" rel="noreferrer">
+							<a href="https://sd.dev/docs/latest/models" target="_blank" rel="noreferrer">
 								{t("config.modelsDocs")} <ExternalLink size={12} />
 							</a>
 							{" · "}
-							<a href="https://pi.dev/docs/latest/providers" target="_blank" rel="noreferrer">
+							<a href="https://sd.dev/docs/latest/providers" target="_blank" rel="noreferrer">
 								{t("config.providersDocs")} <ExternalLink size={12} />
 							</a>
 						</p>
@@ -760,7 +760,7 @@ export function ModelsTab(props: {
 															onChange={(e) => {
 																const compat = { ...getCompat(name) };
 																compat.supportsDeveloperRole = e.target.checked;
-																// 确保两个兼容性字段都显式写入，避免序列化后 JSON 为空导致 pi 后端无法正确判断
+																// 确保两个兼容性字段都显式写入，避免序列化后 JSON 为空导致 sd 后端无法正确判断
 																compat.supportsReasoningEffort ??= false;
 																props.onChangeProvider(name, "compat", compat);
 															}}
@@ -777,7 +777,7 @@ export function ModelsTab(props: {
 															onChange={(e) => {
 																const compat = { ...getCompat(name) };
 																compat.supportsReasoningEffort = e.target.checked;
-																// 确保两个兼容性字段都显式写入，避免序列化后 JSON 为空导致 pi 后端无法正确判断
+																// 确保两个兼容性字段都显式写入，避免序列化后 JSON 为空导致 sd 后端无法正确判断
 																compat.supportsDeveloperRole ??= false;
 																props.onChangeProvider(name, "compat", compat);
 															}}
@@ -797,11 +797,11 @@ export function ModelsTab(props: {
 														fields: [...providerComplexFields, ...providerAdvancedFields].join(", "),
 													})}
 													{" "}
-													<a href="https://pi.dev/docs/latest/models" target="_blank" rel="noreferrer">
-														pi {t("config.docsModels")}
+													<a href="https://sd.dev/docs/latest/models" target="_blank" rel="noreferrer">
+														sd {t("config.docsModels")}
 													</a>
 													{" / "}
-													<a href="https://pi.dev/docs/latest/custom-provider" target="_blank" rel="noreferrer">
+													<a href="https://sd.dev/docs/latest/custom-provider" target="_blank" rel="noreferrer">
 														{t("config.docsCustomProvider")}
 													</a>
 												</span>
@@ -1014,7 +1014,7 @@ export function ModelsTab(props: {
 														{t("config.advancedPreservedModel", {
 															fields: [...modelComplexFields, ...modelAdvancedFields].join(", "),
 														})}
-														<a href="https://pi.dev/docs/latest/models" target="_blank" rel="noreferrer">
+														<a href="https://sd.dev/docs/latest/models" target="_blank" rel="noreferrer">
 															{t("config.docsModels")}
 														</a>
 													</div>

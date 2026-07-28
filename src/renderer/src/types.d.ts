@@ -1,8 +1,8 @@
-import type { SnacodeDesktopApi } from "../../preload";
+﻿import type { SnacodeDesktopApi } from "../../preload";
 
 declare global {
   interface Window {
-    piDesktop: SnacodeDesktopApi;
+    snacodeDesktop: SnacodeDesktopApi;
   }
 }
 

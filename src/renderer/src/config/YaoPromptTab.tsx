@@ -1,17 +1,17 @@
-import { showNotice } from "../utils/notice";
+﻿import { showNotice } from "../utils/notice";
 import { useEffect, useState, useCallback } from "react";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import type { YaoPromptListResult, YaoPromptItem, YaoPromptDetailResult, PromptTemplateSummary, YaoPromptCategory, PromptTemplateListResult } from "../../../shared/types";
 import { t } from "../i18n";
 
-const api = (window as unknown as { piDesktop: { yaoPrompts: { list: (opts?: { category?: string; search?: string; page?: number; pageSize?: number }) => Promise<YaoPromptListResult>; detail: (slug: string, category: string) => Promise<YaoPromptDetailResult>; import: (slug: string, category: string) => Promise<PromptTemplateSummary> } } }).piDesktop;
+const api = (window as unknown as { snacodeDesktop: { yaoPrompts: { list: (opts?: { category?: string; search?: string; page?: number; pageSize?: number }) => Promise<YaoPromptListResult>; detail: (slug: string, category: string) => Promise<YaoPromptDetailResult>; import: (slug: string, category: string) => Promise<PromptTemplateSummary> } } }).snacodeDesktop;
 
 /** 获取本地已安装 prompt 名称集合 */
 async function getInstalledPromptNames(): Promise<Set<string>> {
 	try {
-		const piDesktop = (window as any).piDesktop;
-		if (!piDesktop?.prompts?.list) return new Set();
-		const list: PromptTemplateListResult = await piDesktop.prompts.list();
+		const snacodeDesktop = (window as any).snacodeDesktop;
+		if (!snacodeDesktop?.prompts?.list) return new Set();
+		const list: PromptTemplateListResult = await snacodeDesktop.prompts.list();
 		return new Set(list.templates.filter((t) => t.userCreated).map((t) => t.name.toLowerCase()));
 	} catch {
 		return new Set();

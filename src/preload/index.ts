@@ -79,6 +79,14 @@ import type {
 	ThinkingUpdate,
 	ExtensionPackageInfo,
 } from "../shared/types";
+import type {
+	SkillCard,
+	Task,
+	TaskStatus,
+	LoRAMetadata,
+	TrainingJob,
+	TrainingConfig,
+} from "../shared/algs";
 
 const api = {
 	editors: {
@@ -135,7 +143,7 @@ const api = {
 		// 设置聊天记录目录
 		setChatPath: (path: string) =>
 			ipcRenderer.invoke(ipcChannels.projectsSetChatPath, path) as Promise<Project | null>,
-		// 通过 pi --list-models 获取可用模型列表（无需启动 agent）
+		// 通过 sd --list-models 获取可用模型列表（无需启动 agent）
 		listModels: (projectId?: string) =>
 			ipcRenderer.invoke(ipcChannels.projectsListModels, projectId) as Promise<
 				AvailableModel[]
@@ -445,35 +453,35 @@ const api = {
 	},
 	agentCli: {
 		check: () =>
-			ipcRenderer.invoke(ipcChannels.piCheck) as Promise<AgentInstallStatus>,
-		/** 验证用户手动输入的 agent CLI 路径，通过后主进程会自动保存到 settings.customPiPath */
+			ipcRenderer.invoke(ipcChannels.sdCheck) as Promise<AgentInstallStatus>,
+		/** 验证用户手动输入的 agent CLI 路径，通过后主进程会自动保存到 settings.customSdPath */
 		checkCustom: (customPath: string) =>
 			ipcRenderer.invoke(
-				ipcChannels.piCheckCustom,
+				ipcChannels.sdCheckCustom,
 				customPath,
 			) as Promise<AgentInstallStatus>,
 		checkUpdate: () =>
-			ipcRenderer.invoke(ipcChannels.piUpdateCheck) as Promise<UpdateCheckResult>,
+			ipcRenderer.invoke(ipcChannels.sdUpdateCheck) as Promise<UpdateCheckResult>,
 		update: () =>
-			ipcRenderer.invoke(ipcChannels.piUpdate) as Promise<CliUpdateResult>,
-		/** 执行安装命令（如 npm install -g pi）并返回执行结果 */
+			ipcRenderer.invoke(ipcChannels.sdUpdate) as Promise<CliUpdateResult>,
+		/** 执行安装命令（如 npm install -g sd）并返回执行结果 */
 		execInstall: (command: string) =>
-			ipcRenderer.invoke(ipcChannels.piExecInstall, command) as Promise<AgentInstallExecResult>,
+			ipcRenderer.invoke(ipcChannels.sdExecInstall, command) as Promise<AgentInstallExecResult>,
 		/** 检查 npm 是否可用 */
 		checkNpm: () =>
-			ipcRenderer.invoke(ipcChannels.piCheckNpm) as Promise<NpmAvailabilityResult>,
+			ipcRenderer.invoke(ipcChannels.sdCheckNpm) as Promise<NpmAvailabilityResult>,
 	},
 	/** WSL 相关操作（仅 Windows 有效） */
 	wsl: {
 		/** 获取已安装的 WSL 发行版列表 */
 		listDistros: () =>
 			ipcRenderer.invoke(ipcChannels.wslListDistros) as Promise<string[]>,
-		/** 验证 WSL 连接：检查 distro + user 是否可达，以及 pi 是否已安装 */
+		/** 验证 WSL 连接：检查 distro + user 是否可达，以及 sd 是否已安装 */
 		validateConnection: (distro: string, user: string) =>
 			ipcRenderer.invoke(ipcChannels.wslValidateConnection, distro, user) as Promise<{
 				ok: boolean;
 				whoami: string;
-				piVersion: string;
+				sdVersion: string;
 				error: string;
 			}>,
 	},
@@ -644,9 +652,9 @@ const api = {
 				ipcChannels.settingsUpdate,
 				patch,
 			) as Promise<AppSettings>,
-		testPiProxy: () =>
+		testAgentProxy: () =>
 			ipcRenderer.invoke(
-				ipcChannels.settingsTestPiProxy,
+				ipcChannels.settingsTestSdProxy,
 			) as Promise<ProxyTestResult>,
 		onApplyWindow: (callback: (settings: AppSettings) => void) =>
 			subscribe(ipcChannels.settingsApplyWindow, callback),
@@ -884,12 +892,18 @@ const api = {
 		/** 监听 Agent 扩展 UI 请求（模型通过扩展调用了 ctx.ui.select/confirm/input/editor） */
 		onUiRequest: (callback: (request: { agentId: string; requestId: string; method: string; title: string; options?: string[]; placeholder?: string; prefill?: string; allowOther?: boolean; completed?: boolean; value?: string; cancelled?: boolean; message?: string; notifyType?: "info" | "warning" | "error"; text?: string; widgetKey?: string; widgetLines?: string[]; widgetPlacement?: "aboveEditor" | "belowEditor" }) => void) =>
 			subscribe(ipcChannels.agentsUiRequest, callback),
-		/** 监听项目信任确认请求（主进程在启动 Agent 前对含 .pi 资源的项目发起） */
+		/** 监听项目信任确认请求（主进程在启动 Agent 前对含 .sd 资源的项目发起） */
 		onTrustRequest: (callback: (request: { requestId: string; cwd: string; projectName: string }) => void) =>
 			subscribe(ipcChannels.agentsTrustRequest, callback),
 		/** 回传用户对项目信任确认弹窗的选择（trust-remember/trust-session/deny） */
 		respondTrustRequest: (requestId: string, choice: "trust-remember" | "trust-session" | "deny") =>
 			ipcRenderer.invoke(ipcChannels.agentsTrustResponse, requestId, choice) as Promise<void>,
+		/** 直接调用 MCP 工具（跳过 LLM，直接执行工具） */
+		invokeTool: (agentId: string, toolName: string, args: Record<string, unknown>) =>
+			ipcRenderer.invoke(ipcChannels.agentsInvokeTool, agentId, toolName, args) as Promise<{ success: boolean; error?: string; result?: unknown }>,
+		/** 直接执行 Skill（跳过 LLM，直接执行指定 skill） */
+		invokeSkill: (agentId: string, skillName: string, args?: Record<string, unknown>) =>
+			ipcRenderer.invoke(ipcChannels.agentsInvokeSkill, agentId, skillName, args) as Promise<{ success: boolean; error?: string; result?: unknown }>,
 	},
 	pet: {
 		/** 宠物窗监听主进程推送的聚合状态 */
@@ -1074,6 +1088,30 @@ const api = {
 		export: (draftPath: string) =>
 			ipcRenderer.invoke(ipcChannels.scratchPadExport, draftPath) as Promise<boolean>,
 	},
+
+	// ===== ALGS 系统 =====
+	algs: {
+		submitTask: (input: { input: string; skillCardId: string }) =>
+			ipcRenderer.invoke(ipcChannels.algsSubmitTask, input) as Promise<void>,
+		getTaskStatus: (taskId: string) =>
+			ipcRenderer.invoke(ipcChannels.algsGetTaskStatus, taskId) as Promise<TaskStatus>,
+		getTasks: () =>
+			ipcRenderer.invoke(ipcChannels.algsGetTasks) as Promise<Task[]>,
+		getSkillCards: () =>
+			ipcRenderer.invoke(ipcChannels.algsGetSkillCards) as Promise<SkillCard[]>,
+		saveSkillCard: (card: SkillCard) =>
+			ipcRenderer.invoke(ipcChannels.algsSaveSkillCard, card) as Promise<void>,
+		deleteSkillCard: (cardId: string) =>
+			ipcRenderer.invoke(ipcChannels.algsDeleteSkillCard, cardId) as Promise<void>,
+		downloadLora: (url: string) =>
+			ipcRenderer.invoke(ipcChannels.algsDownloadLora, url) as Promise<void>,
+		getLoraList: () =>
+			ipcRenderer.invoke(ipcChannels.algsGetLoraList) as Promise<LoRAMetadata[]>,
+		triggerTraining: (config: TrainingConfig) =>
+			ipcRenderer.invoke(ipcChannels.algsTriggerTraining, config) as Promise<void>,
+		getTrainingJobs: () =>
+			ipcRenderer.invoke(ipcChannels.algsGetTrainingJobs) as Promise<TrainingJob[]>,
+	},
 };
 
 function subscribe<T>(channel: string, callback: (payload: T) => void) {
@@ -1086,7 +1124,7 @@ function subscribe<T>(channel: string, callback: (payload: T) => void) {
 }
 
 try {
-	contextBridge.exposeInMainWorld("piDesktop", api);
+	contextBridge.exposeInMainWorld("snacodeDesktop", api);
 	ipcRenderer.send(ipcChannels.preloadReady);
 } catch (error) {
 	const detail =

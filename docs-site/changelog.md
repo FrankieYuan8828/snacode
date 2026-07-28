@@ -1,15 +1,15 @@
-# 更新日志
+﻿# 更新日志
 
 完整更新日志仍维护在仓库根目录：
 
-- [中文 CHANGELOG](https://github.com/ayuayue/Snacode/blob/main/CHANGELOG.zh-CN.md)
-- [English CHANGELOG](https://github.com/ayuayue/Snacode/blob/main/CHANGELOG.md)
+- [中文 CHANGELOG](https://github.com/FrankieYuan8828/snacode/blob/main/CHANGELOG.zh-CN.md)
+- [English CHANGELOG](https://github.com/FrankieYuan8828/snacode/blob/main/CHANGELOG.md)
 
 ## v0.6.6
 
 发布时间：2026-07-24
 
-- 🚀 **侧栏品牌区重新设计**：Pi 官方 canvas logo 裁掉空边 + Plantin 字标，agent 启停动画
+- 🚀 **侧栏品牌区重新设计**：sd 官方 canvas logo 裁掉空边 + Plantin 字标，agent 启停动画
 - 🚀 **多 Tab 文件编辑器**：最多 5 个并发 Tab，弹框/侧栏双模式，Diff 差异对比
 - 🚀 **& 会话引用快捷输入**：键入 & 弹出会话列表，选择特定消息或引用全部上下文
 - 🚀 **飞书/Lark 集成**：双向对话、流式卡片、自动拉群、成员管理
@@ -40,7 +40,7 @@
 - 🚀 **外部编辑器集成**：项目右键「打开方式」直接选择编辑器
 - ✨ 公共 MonacoEditor 组件、统一图标按钮、统一弹框 1300×850
 - 🐛 Windows 启动崩溃修复（--no-sandbox 禁用沙箱，0x80000003）
-- 🐛 pi 压缩后进程重启断连修复 + Extension RPC 生命周期修复
+- 🐛 sd 压缩后进程重启断连修复 + Extension RPC 生命周期修复
 - 🐛 兼容分片 `content[].text` 输出，修复部分模型回答被额外换行成"竖排"
 - 🔧 会话打开性能优化、IPC 传输裁剪、清理调试日志
 

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { t } from "../i18n";
 import type { AuthFile, ModelsFile } from "./configTypes";
 import { ConfigComboboxInput, SecretInput } from "./ConfigShared";
 
-// 根据 pi 官方文档支持的供应商列表 (https://pi.dev/docs/latest/providers#auth-file)
+// 根据 sd 官方文档支持的供应商列表 (https://sd.dev/docs/latest/providers#auth-file)
 const PRESET_PROVIDERS = [
 	{ value: "anthropic", label: "Anthropic", env: "ANTHROPIC_API_KEY", url: "https://console.anthropic.com/" },
 	{ value: "openai", label: "OpenAI", env: "OPENAI_API_KEY", url: "https://platform.openai.com/api-keys" },
@@ -158,8 +158,8 @@ export function AuthTab(props: {
 						</ul>
 						<p className="config-auth-guide-note">
 							{t("config.authGuideNote")}{" "}
-							<a href="https://pi.dev/docs/latest/providers#auth-file" target="_blank" rel="noreferrer">
-								pi docs <ExternalLink size={12} />
+							<a href="https://sd.dev/docs/latest/providers#auth-file" target="_blank" rel="noreferrer">
+								sd docs <ExternalLink size={12} />
 							</a>
 						</p>
 					</div>
@@ -360,5 +360,6 @@ export function AuthTab(props: {
 		</div>
 	);
 }
+
 
 

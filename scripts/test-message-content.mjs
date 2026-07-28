@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
-const source = readFileSync(new URL("../src/main/pi/messageContent.ts", import.meta.url), "utf8");
+const source = readFileSync(new URL("../src/main/agent/messageContent.ts", import.meta.url), "utf8");
 const functionSource = source
 	.replace(/import \{ stripFeishuDocActionHint \} from "\.\.\/feishu\/docActions";\n\n/, "")
 	.replace(/export function extractMessageText/, "function extractMessageText");

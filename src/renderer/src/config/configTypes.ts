@@ -1,6 +1,6 @@
-export type ConfigTab = "models" | "auth" | "settings" | "trust" | "raw";
+﻿export type ConfigTab = "models" | "auth" | "settings" | "trust" | "raw";
 
-// ── 匹配 pi 实际文件格式的类型 ────────────────────────
+// ── 匹配 sd 实际文件格式的类型 ────────────────────────
 
 export type ThinkingLevelMap = Partial<Record<"off" | "minimal" | "low" | "medium" | "high" | "xhigh", string | null>>;
 
@@ -36,3 +36,4 @@ export type AuthFile = Record<
 	{ type?: string; key?: string; [key: string]: unknown }
 >;
 export type SettingsFile = Record<string, unknown>;
+

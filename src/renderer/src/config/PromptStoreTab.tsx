@@ -1,4 +1,4 @@
-import { showNotice } from "../utils/notice";
+﻿import { showNotice } from "../utils/notice";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, BookOpen, Check, Download, ExternalLink, Globe, Search } from "lucide-react";
 import type { PromptStoreItem, PromptStoreSearchResult, PromptTemplateSummary, PromptTemplateListResult } from "../../../shared/types";
@@ -20,16 +20,16 @@ function predictImportName(title: string): string {
 /** 获取本地已安装 prompt 名称集合 */
 async function getInstalledPromptNames(): Promise<Set<string>> {
 	try {
-		const piDesktop = (window as any).piDesktop;
-		if (!piDesktop?.prompts?.list) return new Set();
-		const list: PromptTemplateListResult = await piDesktop.prompts.list();
+		const snacodeDesktop = (window as any).snacodeDesktop;
+		if (!snacodeDesktop?.prompts?.list) return new Set();
+		const list: PromptTemplateListResult = await snacodeDesktop.prompts.list();
 		return new Set(list.templates.filter((t) => t.userCreated).map((t) => t.name.toLowerCase()));
 	} catch {
 		return new Set();
 	}
 }
 
-const api = (window as unknown as { piDesktop: { promptStore: { search: (q: string, opts?: { limit?: number }) => Promise<PromptStoreSearchResult>; get: (id: string) => Promise<PromptStoreItem>; import: (data: { title: string; description: string; content: string }) => Promise<PromptTemplateSummary> } } }).piDesktop;
+const api = (window as unknown as { snacodeDesktop: { promptStore: { search: (q: string, opts?: { limit?: number }) => Promise<PromptStoreSearchResult>; get: (id: string) => Promise<PromptStoreItem>; import: (data: { title: string; description: string; content: string }) => Promise<PromptTemplateSummary> } } }).snacodeDesktop;
 
 /**
  * 搜索提示常量：用户在商店搜索栏中看到的热门推荐关键词。

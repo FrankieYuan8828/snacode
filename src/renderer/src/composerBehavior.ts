@@ -1,4 +1,4 @@
-export type SendShortcut =
+﻿export type SendShortcut =
 	| "enter-send"
 	| "ctrl-enter-send"
 	| "shift-enter-send";
@@ -12,13 +12,13 @@ export const SNACODE_PLAN_MODE_MARKER = "__SNACODE_PLAN_MODE__";
 export type ComposerPromptSubmission = {
 	/** 用户在 Snacode 时间线里看到的原始消息，不能包含桌面端内部控制标记。 */
 	message: string;
-	/** 仅发给 pi agent/extension 的隐藏消息，用于触发桌面端专属模式。 */
+	/** 仅发给 sd agent/extension 的隐藏消息，用于触发桌面端专属模式。 */
 	agentMessage?: string;
 };
 
 /**
  * 构造发送给主进程的 composer 快照。
- * Plan 模式依赖 Snacode 内置 extension 在 pi 的 input 事件里识别隐藏标记；
+ * Plan 模式依赖 Snacode 内置 extension 在 sd 的 input 事件里识别隐藏标记；
  * 用户可见消息保持原文，避免会话时间线出现实现细节或控制 token。
  */
 /**
@@ -86,7 +86,7 @@ const BUILTIN_PROMPT_DESC_CN: Record<string, string> = {
 	doc: "添加或改进文档和注释",
 	explain: "用简洁的语言解释代码或架构",
 	commit: "根据暂存更改生成约定式提交信息",
-	"pi-system": "查看 pi 的默认系统提示词（身份、工具、行为准则）",
+	"sd-system": "查看 sd 的默认系统提示词（身份、工具、行为准则）",
 	"skill-discipline": "技能执行纪律：何时及如何触发 agent 技能的规则",
 };
 
@@ -99,7 +99,7 @@ const BUILTIN_PROMPT_DESC_EN: Record<string, string> = {
 	doc: "Add or improve documentation and comments",
 	explain: "Explain code or architecture in simple terms",
 	commit: "Generate a conventional commit message from staged changes",
-	"pi-system": "View pi's default system prompt (identity, tools, guidelines)",
+	"sd-system": "View sd's default system prompt (identity, tools, guidelines)",
 	"skill-discipline": "Skills execution discipline: rules for when and how to trigger agent skills",
 };
 
@@ -129,8 +129,8 @@ function stripFrontmatter(raw: string): string {
 /**
  * 展开消息中的 prompt template 命令（/templateName）。
  *
- * 在发送到 pi 之前本地展开模板内容，避免依赖 pi 的展开机制导致：
- * - 用户附加在命令后的文本丢失（pi 仅替换命令，丢弃后续输入）
+ * 在发送到 sd 之前本地展开模板内容，避免依赖 sd 的展开机制导致：
+ * - 用户附加在命令后的文本丢失（sd 仅替换命令，丢弃后续输入）
  * - 模板内容中的特殊符号（frontmatter delimiters、XML 标签等）
  *   与用户文本拼接时串格式
  *
@@ -138,7 +138,7 @@ function stripFrontmatter(raw: string): string {
  * - 按 name 长度降序匹配，避免短名称误吃长名称的前缀
  * - 只匹配后跟空格或行尾的 /name，防止部分匹配
  * - 单次正则遍历，不会级联展开替换后的内容
- * - 未找到的模板名保持原样，由 pi 兜底处理
+ * - 未找到的模板名保持原样，由 sd 兜底处理
  * - 展开时剥离 content 中的 frontmatter，避免元数据泄漏到对话消息中
  */
 export function expandPromptTemplates(
@@ -152,7 +152,7 @@ export function expandPromptTemplates(
 	const nameToContent = new Map(sorted.map((t) => [t.name, t.content]));
 	const nameToDescription = new Map(sorted.map((t) => [t.name, t.description]));
 
-	// 记录最后匹配到的模板名，用于提取 description 作为元数据发送给 pi agent
+	// 记录最后匹配到的模板名，用于提取 description 作为元数据发送给 sd agent
 	let matchedName: string | undefined;
 
 	// 构建 /name1|/name2|/name3 的单一正则，捕获命令前后的空白分隔符
@@ -168,7 +168,7 @@ export function expandPromptTemplates(
 		matchedName = name;
 		const rawContent = nameToContent.get(name) ?? "/" + name;
 		// 剥离 content 中的 frontmatter 元数据，只保留正文，
-		// 避免 `---\ndescription: xxx\n---` 泄漏到 pi agent 的对话消息中。
+		// 避免 `---\ndescription: xxx\n---` 泄漏到 sd agent 的对话消息中。
 		const content = stripFrontmatter(rawContent);
 		// 命令后有用户输入时用两个换行分隔模板内容和用户输入，提升可读性
 		const separator = suffix && /\s/.test(suffix) ? "\n\n" : "";
@@ -188,7 +188,7 @@ export function buildComposerPromptSubmission(
 ): ComposerPromptSubmission {
 	if (mode !== "plan") return { message };
 
-	// 斜线命令原样发送，让 pi 解析执行——plan 模式下也能用 /plan off、/todos 等，
+	// 斜线命令原样发送，让 sd 解析执行——plan 模式下也能用 /plan off、/todos 等，
 	// 否则 plan 标记前缀会让 "/plan off" 变成普通消息发给 LLM，命令无法触发。
 	const trimmed = message.trim();
 	if (trimmed.startsWith("/")) return { message };

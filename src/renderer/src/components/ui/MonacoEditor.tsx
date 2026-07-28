@@ -1,4 +1,4 @@
-import { memo } from "react";
+﻿import { memo } from "react";
 import { Editor } from "@monaco-editor/react";
 import { setupMonaco } from "../../utils/monacoSetup";
 

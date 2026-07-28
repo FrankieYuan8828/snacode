@@ -1,4 +1,4 @@
-import { useRef } from "react";
+﻿import { useRef } from "react";
 import type { PetAggregateState } from "@shared/types";
 
 /**
@@ -23,7 +23,7 @@ export function PetInteraction({ state, onDragStateChange }: Props) {
 		e.preventDefault();
 		e.stopPropagation();
 		if (state.mode === "hidden") return;
-		void window.piDesktop.pet.contextMenu();
+		void window.snacodeDesktop.pet.contextMenu();
 	};
 
 	const down = (e: React.PointerEvent) => {
@@ -33,7 +33,7 @@ export function PetInteraction({ state, onDragStateChange }: Props) {
 		moved.current = 0;
 		onDragStateChange?.(true);
 		// 通知主进程暂停巡游：松手后遗留的 tick 可能命中行进反向边界，导致瞬移
-		void window.piDesktop.pet.setDragging(true);
+		void window.snacodeDesktop.pet.setDragging(true);
 		(e.target as HTMLElement).setPointerCapture?.(e.pointerId);
 	};
 
@@ -45,7 +45,7 @@ export function PetInteraction({ state, onDragStateChange }: Props) {
 		moved.current = Math.max(moved.current, Math.abs(e.screenX - startScreen.current.x) + Math.abs(e.screenY - startScreen.current.y));
 		// 发送增量移动（delta 基于连续 screenX 差值，不混用 clientX/screenLeft，
 		// 主进程 ipcMain.handle 串行处理，setPosition 同步，不会产生增量竞争）
-		void window.piDesktop.pet.moveBy({ dx, dy });
+		void window.snacodeDesktop.pet.moveBy({ dx, dy });
 	};
 
 	const up = (e: React.PointerEvent) => {
@@ -54,7 +54,7 @@ export function PetInteraction({ state, onDragStateChange }: Props) {
 		startScreen.current = null;
 		onDragStateChange?.(false);
 		// 拖拽结束：通知主进程，若当前仍为 idle 且巡游开启，则从新位置恢复巡游
-		void window.piDesktop.pet.setDragging(false);
+		void window.snacodeDesktop.pet.setDragging(false);
 		(e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
 
 		if (moved.current < CLICK) {
@@ -62,12 +62,12 @@ export function PetInteraction({ state, onDragStateChange }: Props) {
 			if (now - lastTap.current < DBL_MS) {
 				lastTap.current = 0;
 				if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
-				void window.piDesktop.pet.tease();
+				void window.snacodeDesktop.pet.tease();
 				return;
 			}
 			lastTap.current = now;
 			if (tapTimer.current) clearTimeout(tapTimer.current);
-			tapTimer.current = setTimeout(() => { tapTimer.current = null; void window.piDesktop.pet.focusAgent(); }, DBL_MS);
+			tapTimer.current = setTimeout(() => { tapTimer.current = null; void window.snacodeDesktop.pet.focusAgent(); }, DBL_MS);
 		}
 	};
 

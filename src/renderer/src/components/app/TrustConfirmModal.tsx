@@ -1,14 +1,14 @@
-import { t } from "../../i18n";
+﻿import { t } from "@renderer/i18n";
 
 /**
  * 项目信任确认弹窗。
  *
- * 当用户在 Snacode 中打开含 .pi 配置资源（扩展 / skills / settings / SYSTEM.md 等）
+ * 当用户在 Snacode 中打开含 .sd 配置资源（扩展 / skills / settings / SYSTEM.md 等）
  * 且未在 trust.json 记录决策的项目时，由主进程 AgentManager.ensureProjectTrust 经 IPC
- * 触发本弹窗。pi 在 RPC 模式下 project_trust 事件 hasUI 恒为 false，无法用其内置流程弹窗，
+ * 触发本弹窗。sd 在 RPC 模式下 project_trust 事件 hasUI 恒为 false，无法用其内置流程弹窗，
  * 因此信任决策由桌面端自行完成。
  *
- * 用户选择后通过 onChoose 回传，主进程据此决定是否启动 pi 进程：
+ * 用户选择后通过 onChoose 回传，主进程据此决定是否启动 sd 进程：
  *   - trust-remember：永久信任，写入 trust.json
  *   - trust-session：仅本次会话信任，不落盘
  *   - deny：拒绝信任，阻止 Agent 创建并记录 false 避免重复打扰

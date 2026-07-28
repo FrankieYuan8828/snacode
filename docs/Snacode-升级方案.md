@@ -4,7 +4,7 @@
 
 ### 1.1 升级背景
 
-Snacode 是一个基于 Electron 的桌面应用，用于管理和运行 pi RPC Agent。由于 Electron 架构的限制（单进程模型、伪终端、资源受限），决定将项目升级为 **Snacode**，采用全新的多 Agent 并行架构。
+Snacode 是一个基于 Electron 的桌面应用，用于管理和运行 sd RPC Agent。由于 Electron 架构的限制（单进程模型、伪终端、资源受限），决定将项目升级为 **Snacode**，采用全新的多 Agent 并行架构。
 
 ### 1.2 核心目标
 
@@ -754,11 +754,11 @@ class SdProcess {
 
 | 数据类型 | 原路径 | 新路径 | 转换说明 |
 |----------|--------|--------|----------|
-| 会话文件 | `~/.pi/sessions/` | `~/.snacode/sessions/` | JSONL 格式保持兼容 |
-| 项目配置 | `~/.pi/projects.json` | `~/.snacode/projects.json` | 结构调整 |
-| 用户设置 | `~/.pi/settings.json` | `~/.snacode/settings.json` | 字段映射 |
-| 技能文件 | `~/.pi/agents/skills/` | `~/.snacode/skills/` | 路径重命名 |
-| 扩展文件 | `~/.pi/agent/extensions/` | `~/.snacode/extensions/` | 路径重命名 |
+| 会话文件 | `~/.sd/agent/sessions/` | `~/.snacode/sessions/` | JSONL 格式保持兼容 |
+| 项目配置 | `~/.sd/agent/projects.json` | `~/.snacode/projects.json` | 结构调整 |
+| 用户设置 | `~/.sd/agent/settings.json` | `~/.snacode/settings.json` | 字段映射 |
+| 技能文件 | `~/.sd/agent/skills/` | `~/.snacode/skills/` | 路径重命名 |
+| 扩展文件 | `~/.sd/agent/extensions/` | `~/.snacode/extensions/` | 路径重命名 |
 
 ### 10.5 sd CLI 策略：创建 Wrapper 脚本
 

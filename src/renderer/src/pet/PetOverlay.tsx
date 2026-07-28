@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+﻿import { useEffect, useRef } from "react";
 import type { PetAggregateState, PetManifest, PetMode, PetNotification } from "@shared/types";
 import { type SpriteSheet, MODE_ROW, MODE_FRAMES, CELL_W, CELL_H } from "./PetSpriteSheet";
 

@@ -49,7 +49,7 @@ export function FeishuConnectDialog({ onClose, onConnect, onTest, connecting, on
 
 	/** 飞书登录/指南页强制使用系统默认浏览器，不适合在内置浏览器打开 */
 	const openSystemExternal = useCallback(async (url: string) => {
-		const appApi = (window as unknown as { piDesktop?: { app?: { openExternal: (u: string, forceSystem?: boolean) => Promise<void> } } }).piDesktop?.app;
+		const appApi = (window as unknown as { snacodeDesktop?: { app?: { openExternal: (u: string, forceSystem?: boolean) => Promise<void> } } }).snacodeDesktop?.app;
 		if (appApi?.openExternal) {
 			await appApi.openExternal(url, true);
 		} else {

@@ -135,8 +135,8 @@ export type SessionSummary = {
 	preview: string;
 	updatedAt: number;
 	messageCount: number;
-	/** 会话来源：pi 原生、Codex 导入、Claude 导入、OpenCode 导入 */
-	source?: "pi" | "codex" | "claude" | "opencode";
+	/** 会话来源：sd 原生、Codex 导入、Claude 导入、OpenCode 导入 */
+	source?: "sd" | "codex" | "claude" | "opencode";
 	/** 标记此会话文件来自 WSL，rename/delete/copy 等操作需走 wsl.exe */
 	wsl?: boolean;
 	codexSessionId?: string;
@@ -314,7 +314,7 @@ export type AppSettings = {
 	lightBackground: LightBackgroundMode;
 	/** 界面语言，system 跟随系统语言；pseudo 用于长文案布局压力测试 */
 	language: AppLanguageMode;
-	piEnvironmentChecked: boolean;
+	sdEnvironmentChecked: boolean;
 	/** 是否启用会话右侧的 Git 源代码管理入口与面板，默认开启以保持升级前行为。 */
 	enableGitManagement: boolean;
 	/** Git 提交摘要生成提示词模板，{diff} 会被替换为实际 diff 内容 */
@@ -327,20 +327,20 @@ export type AppSettings = {
 	showThinking: boolean;
 	/** 是否开启开发者控制台（DevTools） */
 	showDevTools: boolean;
-	/** 是否给 pi agent 子进程注入代理环境变量，不影响 desktop 自身网络请求 */
-	piProxyEnabled: boolean;
-	/** pi agent 使用的代理地址，例如 http://127.0.0.1:7890 */
-	piProxyUrl: string;
-	/** pi agent 代理绕过列表，对应 NO_PROXY 环境变量 */
-	piProxyBypass: string;
-	/** 是否给桌面端自身网络请求启用代理，不影响已启动的 pi agent 子进程 */
+	/** 是否给 sd agent 子进程注入代理环境变量，不影响 desktop 自身网络请求 */
+	sdProxyEnabled: boolean;
+	/** sd agent 使用的代理地址，例如 http://127.0.0.1:7890 */
+	sdProxyUrl: string;
+	/** sd agent 代理绕过列表，对应 NO_PROXY 环境变量 */
+	sdProxyBypass: string;
+	/** 是否给桌面端自身网络请求启用代理，不影响已启动的 sd agent 子进程 */
 	desktopProxyEnabled: boolean;
 	/** 桌面端自身网络请求使用的代理地址，例如 http://127.0.0.1:7890 */
 	desktopProxyUrl: string;
 	/** 桌面端代理绕过列表，对应 Electron proxyBypassRules */
 	desktopProxyBypass: string;
-	/** 用户手动指定的 pi CLI 命令路径，自动检测不到时用于兜底 */
-	customPiPath: string;
+	/** 用户手动指定的 sd CLI 命令路径，自动检测不到时用于兜底 */
+	customSdPath: string;
 
 	/** 是否发送匿名、低频、最小字段的使用统计 */
 	telemetryEnabled: boolean;
@@ -366,11 +366,11 @@ export type AppSettings = {
 	maxEditorFileSizeMB: number;
 	/** 外部编辑器配置：首次异步检测后保存，用户可在设置中手动覆盖路径。 */
 	externalEditors: ExternalEditorSettings;
-	/** 是否启用 WSL fallback：在 Windows 自动检测不到 pi 时，尝试从 WSL 启动 pi */
+	/** 是否启用 WSL fallback：在 Windows 自动检测不到 sd 时，尝试从 WSL 启动 sd */
 	wslEnabled: boolean;
 	/** WSL 发行版名称，如 Debian、Ubuntu */
 	wslDistro: string;
-	/** WSL 用户名，如 piuser */
+	/** WSL 用户名，如 sduser */
 	wslUser: string;
 
 	// ── 桌面宠物（全局聚合单宠，默认关闭，不破坏现状） ──
@@ -413,9 +413,12 @@ export type AppSettings = {
 	fontFamilyMonoCustom: string;
 
 	// ── 更新检测 ──
-	/** 是否禁用版本更新检测（Snacode + Pi CLI），默认 false 表示正常检测；
+	/** 是否禁用版本更新检测（Snacode + SD CLI），默认 false 表示正常检测；
 	 *  开启后自动跳过启动和定时检测，设置页中检测按钮也禁用。 */
 	disableUpdateCheck: boolean;
+
+	/** 默认项目信任策略：always（始终自动信任）、ask（询问用户）、never（默认不信任） */
+	defaultProjectTrust: "always" | "ask" | "never";
 
 };
 
@@ -519,7 +522,7 @@ export type ConfigFileReadResult<T> = {
 };
 
 export type SkillLocation = {
-	id: "pi-global" | "agents-global" | "project-pi" | "project-agents" | "sd-skill-library" | "sd-global";
+	id: "snacode-global" | "agents-global" | "project-snacode" | "project-agents" | "snacode-skill-library";
 	label: string;
 	path: string;
 	rootMarkdownEnabled: boolean;
@@ -806,8 +809,8 @@ export type ExtensionPackageInfo = {
 	updated: string;
 	npmUrl: string;
 	repoUrl?: string;
-	/** pi.dev 详情页的 name 查询参数；部分包名和扩展展示名不完全一致。 */
-	piPackageName?: string;
+	/** sd.dev 详情页的 name 查询参数；部分包名和扩展展示名不完全一致。 */
+	sdPackageName?: string;
 	/** GitHub 相关信息 */
 	github?: {
 		stars: number;
@@ -863,7 +866,7 @@ export type FeedbackEnvironment = {
 	electronVersion: string;
 	chromeVersion: string;
 	nodeVersion: string;
-	pi: AgentInstallStatus;
+	sd: AgentInstallStatus;
 };
 
 export type AppUpdateAsset = {
@@ -919,7 +922,7 @@ export type AppLogQuery = {
 	limit?: number;
 };
 
-export type PiRuntimeEvent = {
+export type SdRuntimeEvent = {
 	agentId: string;
 	event: unknown;
 };
@@ -1062,7 +1065,7 @@ export type CreateAgentInput = {
 	projectId: string;
 	title?: string;
 	sessionPath?: string;
-	/** 瞬时会话：不保存 session 文件（对应 pi --no-session） */
+	/** 瞬时会话：不保存 session 文件（对应 sd --no-session） */
 	noSession?: boolean;
 };
 
@@ -1071,7 +1074,7 @@ export type ForkMessage = {
 	text: string;
 };
 
-/** 图片内容格式，与 pi RPC 的 ImageContent 一致 */
+/** 图片内容格式，与 sd RPC 的 ImageContent 一致 */
 export type ImageContent = {
 	type: "image";
 	data: string; // base64 编码的图片数据
@@ -1086,12 +1089,12 @@ export type SendPromptInput = {
 	streamingBehavior?: "steer" | "followUp";
 	/** 仅发给 Agent 的内部提示，不显示在聊天 UI 中。 */
 	agentMessage?: string;
-	/** 提示的简短描述/摘要，发给 pi agent 用于标识本次 prompt 的意图。
+	/** 提示的简短描述/摘要，发给 sd agent 用于标识本次 prompt 的意图。
 	 *  从模板 description、用户输入首行自动提取；飞书/WebService 等外部来源可不传。 */
 	description?: string;
 };
 
-/** 主进程完成 pi prompt 预检后的明确接收结果。 */
+/** 主进程完成 sd prompt 预检后的明确接收结果。 */
 export type SendPromptResult =
 	| { accepted: true }
 	| { accepted: false; error: string; delivery?: "rejected" }

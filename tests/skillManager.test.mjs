@@ -50,7 +50,7 @@ async function createSkillFile(path, name, description = `${name} description`) 
 }
 
 async function createSkillRoot(home) {
-	const globalSkills = join(home, ".pi", "agent", "skills");
+	const globalSkills = join(home, ".sd", "agent", "skills");
 	await mkdir(globalSkills, { recursive: true });
 	return globalSkills;
 }

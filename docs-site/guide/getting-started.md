@@ -1,33 +1,33 @@
 # 快速开始
 
-Snacode 是一个用于管理多个 [pi](https://pi.dev) 编码 Agent 会话的桌面工作台。它负责桌面端工作流，Agent 能力仍由 pi CLI 提供。
+Snacode 是一个用于管理多个 [sd](https://sd.dev) 编码 Agent 会话的桌面工作台。它负责桌面端工作流，Agent 能力仍由 sd CLI 提供。
 
 ## 环境要求
 
 - Node.js 20+
 - npm
-- 系统 `PATH` 中可访问 `pi` 命令
-- 已完成 pi 的 Provider、登录或 API Key 配置
+- 系统 `PATH` 中可访问 `sd` 命令
+- 已完成 sd 的 Provider、登录或 API Key 配置
 
-验证 pi 是否可用：
+验证 sd 是否可用：
 
 ```bash
-pi --version
-pi --mode rpc
+sd --version
+sd --mode rpc
 ```
 
 ## 下载安装
 
 Windows、macOS、Linux 的预构建安装包发布在 GitHub Releases：
 
-[打开 GitHub Releases](https://github.com/ayuayue/Snacode/releases)
+[打开 GitHub Releases](https://github.com/FrankieYuan8828/snacode/releases)
 
-安装后首次启动时，Snacode 会尝试自动检测 `pi` 路径。如果检测失败，可以在设置里手动填写 pi 可执行文件路径。
+安装后首次启动时，Snacode 会尝试自动检测 `sd` 路径。如果检测失败，可以在设置里手动填写 sd 可执行文件路径。
 
 ## 从源码运行
 
 ```bash
-git clone https://github.com/ayuayue/Snacode.git
+git clone https://github.com/FrankieYuan8828/snacode.git
 cd snacode
 npm install
 npm run make-icon
@@ -50,4 +50,4 @@ npm run dev
 npm run preview
 ```
 
-Renderer 在 `window.piDesktop` 不可用时会降级为 mock 数据，适合调试布局和响应式表现。真实 Agent、会话和文件操作仍需要在 Electron 环境中验证。
+Renderer 在 `window.sdDesktop` 不可用时会降级为 mock 数据，适合调试布局和响应式表现。真实 Agent、会话和文件操作仍需要在 Electron 环境中验证。

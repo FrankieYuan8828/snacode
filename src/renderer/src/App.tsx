@@ -1,4 +1,4 @@
-import {
+﻿import {
   Fragment,
   lazy,
   Suspense,
@@ -218,10 +218,11 @@ import type {
 } from "../../shared/types";
 
 const isLanWeb =
-  !window.piDesktop && window.location.protocol.startsWith("http");
+  !window.snacodeDesktop && window.location.protocol.startsWith("http");
 const isElectronRuntime = navigator.userAgent.includes("Electron/");
-const missingElectronPreload = isElectronRuntime && !window.piDesktop;
-function createUnavailableDesktopApi(): typeof window.piDesktop {
+// 动态检测 preload 是否注入，避免模块加载时 preload 尚未完成注入
+const getMissingElectronPreload = () => isElectronRuntime && !window.snacodeDesktop;
+function createUnavailableDesktopApi(): typeof window.snacodeDesktop {
   const fail = () => {
     throw new Error(t("app.preloadMissing"));
   };
@@ -231,11 +232,11 @@ function createUnavailableDesktopApi(): typeof window.piDesktop {
       get: fail,
       set: fail,
     },
-  ) as typeof window.piDesktop;
+  ) as typeof window.snacodeDesktop;
 }
 const api =
-  window.piDesktop ??
-  (missingElectronPreload
+  window.snacodeDesktop ??
+  (getMissingElectronPreload()
     ? createUnavailableDesktopApi()
     : isLanWeb
       ? createBrowserApi()
@@ -290,9 +291,9 @@ function formatCodexSubagentName(session: SessionSummary) {
   return label || session.name || t("app.codexSubagent");
 }
 
-/** pi 原生子会话名称：优先使用会话名，回退到 "子会话" */
+/** sd 原生子会话名称：优先使用会话名，回退到 "子会话" */
 function formatPiSubagentName(session: SessionSummary) {
-  return session.name || t("app.piSubagent");
+  return session.name || t("app.sdSubagent");
 }
 
 function isAbsoluteFilePath(path: string) {
@@ -300,12 +301,12 @@ function isAbsoluteFilePath(path: string) {
 }
 
 /** 从 localStorage 恢复会话来源过滤配置 */
-function loadSessionSourceFilter(): Record<string, Set<"pi" | "codex" | "claude" | "opencode"> | null> {
+function loadSessionSourceFilter(): Record<string, Set<"sd" | "codex" | "claude" | "opencode"> | null> {
 	try {
 		const raw = localStorage.getItem("snacode-session-source-filter");
 		if (!raw) return {};
 		const parsed = JSON.parse(raw);
-		const result: Record<string, Set<"pi" | "codex" | "claude" | "opencode"> | null> = {};
+		const result: Record<string, Set<"sd" | "codex" | "claude" | "opencode"> | null> = {};
 		for (const [key, val] of Object.entries(parsed)) {
 			if (val === null) {
 				result[key] = null;
@@ -320,7 +321,7 @@ function loadSessionSourceFilter(): Record<string, Set<"pi" | "codex" | "claude"
 }
 
 /** 将会话来源过滤持久化到 localStorage */
-function saveSessionSourceFilter(filter: Record<string, Set<"pi" | "codex" | "claude" | "opencode"> | null>) {
+function saveSessionSourceFilter(filter: Record<string, Set<"sd" | "codex" | "claude" | "opencode"> | null>) {
 	try {
 		const obj: Record<string, string[] | null> = {};
 		for (const [key, val] of Object.entries(filter)) {
@@ -457,7 +458,7 @@ function migrateAgentRecord<T>(
   return next;
 }
 
-/** Agent 运行时暂存在 renderer、尚未提交给 pi 的消息。 */
+/** Agent 运行时暂存在 renderer、尚未提交给 sd 的消息。 */
 type QueuedPrompt = QueuedPromptSnapshot;
 
 class PromptDeliveryUnknownError extends Error {
@@ -468,7 +469,25 @@ class PromptDeliveryUnknownError extends Error {
 }
 
 export function App() {
-  if (missingElectronPreload) {
+  // 组件内动态检测，确保 preload 有足够时间完成注入
+  const [missingPreload, setMissingPreload] = useState(getMissingElectronPreload());
+  
+  useEffect(() => {
+    // 如果初始检测为缺失，尝试等待 preload 注入
+    if (missingPreload && isElectronRuntime) {
+      const checkInterval = setInterval(() => {
+        if (window.snacodeDesktop) {
+          setMissingPreload(false);
+          clearInterval(checkInterval);
+        }
+      }, 100);
+      // 5秒后如果仍未注入，停止检查
+      setTimeout(() => clearInterval(checkInterval), 5000);
+      return () => clearInterval(checkInterval);
+    }
+  }, []);
+  
+  if (missingPreload) {
     return (
       <div className="boot-screen root-loading">
         <div className="boot-logo root-loading-logo">
@@ -490,13 +509,11 @@ export function App() {
   const [dragOverProjectId, setDragOverProjectId] = useState<string>();
   const [agents, setAgents] = useState<AgentTab[]>([]);
   const [pendingAgents, setPendingAgents] = useState<PendingAgentTab[]>([]);
-  /** 侧栏贪吃蛇 logo 状态：根据 agent 状态和消息类型动态变化 */
-  const [snakeLogoState, setSnakeLogoState] = useState<"idle" | "thinking" | "working" | "executing" | "chatting">("idle");
   const [activeProjectId, setActiveProjectId] = useState<string>();
   const activeProjectIdRef = useRef<string | undefined>(activeProjectId);
   activeProjectIdRef.current = activeProjectId;
   const [activeAgentId, setActiveAgentId] = useState<string>();
-  // 切换 agent（新会话/恢复会话）时刷新设置，使 pi agent 的 hideThinkingBlock 立即生效
+  // 切换 agent（新会话/恢复会话）时刷新设置，使 sd agent 的 hideThinkingBlock 立即生效
   useEffect(() => {
     if (activeAgentId) {
       void api.settings.get().then(setSettings).catch(() => undefined);
@@ -742,7 +759,7 @@ export function App() {
     danger?: boolean;
     confirmLabel?: string;
   } | null>(null);
-  // 项目信任确认请求：含 .pi 资源且未记录决策的项目首次创建 Agent 时由主进程发起
+  // 项目信任确认请求：含 .sd 资源且未记录决策的项目首次创建 Agent 时由主进程发起
   const [trustRequest, setTrustRequest] = useState<{
     requestId: string;
     cwd: string;
@@ -807,9 +824,9 @@ export function App() {
   >(() => new Set());
   /** 历史会话来源过滤（按项目）：undefined=显示全部，Record 含项目ID对应 Set */
   const [sessionSourceFilter, setSessionSourceFilter] = useState<
-  	Record<string, Set<"pi" | "codex" | "claude" | "opencode"> | null>
+  	Record<string, Set<"sd" | "codex" | "claude" | "opencode"> | null>
   >(() => loadSessionSourceFilter());
-  /** 侧栏子会话展开状态（统一管理 Codex 子代理和 pi 子会话） */
+  /** 侧栏子会话展开状态（统一管理 Codex 子代理和 sd 子会话） */
   const [expandedSubagentGroups, setExpandedSubagentGroups] =
     useState<Set<string>>(() => new Set());
 
@@ -1156,10 +1173,10 @@ export function App() {
   const [updateProgress, setUpdateProgress] = useState<AppUpdateDownloadProgress | null>(null);
   const [downloadedUpdatePath, setDownloadedUpdatePath] = useState<string | null>(null);
   const [upToDateVersion, setUpToDateVersion] = useState<string | null>(null);
-  const [piUpdating, setPiUpdating] = useState(false);
-  const [piUpdateChecking, setPiUpdateChecking] = useState(false);
-  const [piUpdateCheck, setPiUpdateCheck] = useState<UpdateCheckResult | null>(null);
-  const [piUpdateResult, setPiUpdateResult] = useState<CliUpdateResult | null>(null);
+  const [agentUpdating, setAgentUpdating] = useState(false);
+  const [sdUpdateChecking, setAgentUpdateChecking] = useState(false);
+  const [sdUpdateCheck, setAgentUpdateCheck] = useState<UpdateCheckResult | null>(null);
+  const [sdUpdateResult, setAgentUpdateResult] = useState<CliUpdateResult | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [windowAlwaysOnTop, setWindowAlwaysOnTop] = useState(false);
@@ -1191,21 +1208,21 @@ export function App() {
     theme: "system",
     lightBackground: "white",
     language: "system",
-    piEnvironmentChecked: false,
+    sdEnvironmentChecked: false,
     enableGitManagement: true,
     gitCommitMessagePrompt: "",
     closeToTray: true,
     enableNotifications: true,
-    // showThinking 由 pi agent 的 hideThinkingBlock 控制，启动后从主进程加载的真实值会覆盖此处
+    // showThinking 由 sd agent 的 hideThinkingBlock 控制，启动后从主进程加载的真实值会覆盖此处
     showThinking: true,
     showDevTools: false,
-    piProxyEnabled: false,
-    piProxyUrl: "http://127.0.0.1:7890",
-    piProxyBypass: "localhost,127.0.0.1,::1",
+    sdProxyEnabled: false,
+    sdProxyUrl: "http://127.0.0.1:7890",
+    sdProxyBypass: "localhost,127.0.0.1,::1",
     desktopProxyEnabled: false,
     desktopProxyUrl: "http://127.0.0.1:7890",
     desktopProxyBypass: "localhost,127.0.0.1,::1",
-    customPiPath: "",
+    customSdPath: "",
     wslEnabled: false,
     wslDistro: "Ubuntu",
     wslUser: "root",
@@ -1239,27 +1256,28 @@ export function App() {
     fontFamilyMono: "commit-mono",
     fontFamilyMonoCustom: "",
     disableUpdateCheck: false,
+    defaultProjectTrust: "ask",
   });
   /* settingsNotice 已改用 showToast (app-notice) 实现 */
-  const [piProxyNotice, setPiProxyNotice] = useState("");
-  const [piProxyNoticeTone, setPiProxyNoticeTone] = useState<
+  const [agentProxyNotice, setAgentProxyNotice] = useState("");
+  const [agentProxyNoticeTone, setAgentProxyNoticeTone] = useState<
     "info" | "success" | "error"
   >("info");
-  const [piStatus, setPiStatus] = useState<AgentInstallStatus | null>(null);
-  const [piProxyChecking, setPiProxyChecking] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<AgentInstallStatus | null>(null);
+  const [agentProxyChecking, setAgentProxyChecking] = useState(false);
   const [webServiceChanging, setWebServiceChanging] = useState(false);
   const [appInfo, setAppInfo] = useState<AppInfo>({
     version: "-",
-    releasesUrl: "https://github.com/ayuayue/pi-desktop/releases",
+    releasesUrl: "https://github.com/FrankieYuan8828/snacode/releases",
     platform: "win32",
     homeDir: "",
   });
-  const [piChecking, setPiChecking] = useState(false);
+  const [sdChecking, setPiChecking] = useState(false);
   const [systemLanguage, setSystemLanguage] = useState<string | null>(null);
   const resolvedLocale = resolveLocale(settings.language, systemLanguage ?? undefined);
   setI18nLocale(resolvedLocale);
-  // 手动输入 pi 路径相关状态
-  const [customPiPath, setCustomPiPath] = useState("");
+  // 手动输入 sd 路径相关状态
+  const [customSdPath, setCustomAgentPath] = useState("");
   const [customPathValidating, setCustomPathValidating] = useState(false);
   const [customPathResult, setCustomPathResult] =
     useState<AgentInstallStatus | null>(null);
@@ -1269,7 +1287,7 @@ export function App() {
   const [npmChecking, setNpmChecking] = useState(false);
   /** 安装命令文本（可编辑） */
   const [installCommand, setInstallCommand] = useState(
-    "npm install -g @earendil-works/pi-coding-agent",
+    "npm install -g @snacode/sd-coding-agent",
   );
   /** 是否使用国内镜像源 */
   const [installUseMirror, setInstallUseMirror] = useState(false);
@@ -1734,7 +1752,7 @@ export function App() {
   }, [activeMessages]);
 
   // 从 activeUiRequest 提取正在进行的交互式请求（select/confirm/input/editor）
-  // 这是 ask_question 在 pi RPC 模式下的表现方式：pi 通过 extension_ui_request 将
+  // 这是 ask_question 在 sd RPC 模式下的表现方式：sd 通过 extension_ui_request 将
   // 等待用户回答的对话框发送到桌面端，包含 requestId、title、options 等完整信息。
   const activeUiAsk = useMemo(() => {
     if (!activeUiRequest) return undefined;
@@ -2086,7 +2104,7 @@ export function App() {
       .catch(() => undefined);
     void api.settings.get().then((next) => {
       setSettings(next);
-      setCustomPiPath(next.customPiPath ?? "");
+      setCustomAgentPath(next.customSdPath ?? "");
       if (!Object.values(next.externalEditors).some((editor) => editor.command)) {
         void api.editors
           .redetect()
@@ -2097,12 +2115,12 @@ export function App() {
           .then(setExternalEditors)
           .catch(() => undefined);
       }
-      if (!next.piEnvironmentChecked) {
-        // 首次检测延后一帧启动,先让主界面完成绘制,避免 packaged app 打开时出现几秒白屏。
-        window.setTimeout(() => void checkPiInstall("startup"), 300);
-      }
+      // sd CLI 已内置到项目中，无需单独检测安装环境
+      // if (!next.sdEnvironmentChecked) {
+      //   window.setTimeout(() => void checkPiInstall("startup"), 300);
+      // }
       if (!next.disableUpdateCheck) {
-        window.setTimeout(() => void checkPiCliUpdateOnStartup(), 1200);
+        window.setTimeout(() => void checkAgentCliUpdateOnStartup(), 1200);
       }
     });
 
@@ -2329,7 +2347,7 @@ export function App() {
           if (Object.keys(next).length === 0) return null;
           return next;
         }
-        /* 用户通过 select 弹框自定义输入框提交自定义值后，Pi 会收到 "✎ 自行输入..."
+        /* 用户通过 select 弹框自定义输入框提交自定义值后，Sd 会收到 "✎ 自行输入..."
            选项值并发送 input 弹框让用户输入。此处检测到 pending 值后自动提交 input
            弹框，对用户表现为一次提交即完成，无需二次输入。 */
         if (request.method === "input" && pendingCustomInputRef.current) {
@@ -2342,7 +2360,7 @@ export function App() {
         return { ...(current ?? {}), [request.requestId]: request as UiRequest };
       });
     });
-    // 监听项目信任确认请求：主进程在启动 pi 前对含 .pi 资源的项目发起，弹窗等待用户决策
+    // 监听项目信任确认请求：主进程在启动 sd 前对含 .sd 资源的项目发起，弹窗等待用户决策
     const offTrustRequest = api.agents.onTrustRequest((request) => {
       setTrustRequest(request);
     });
@@ -2877,42 +2895,10 @@ export function App() {
         if (previousStatus !== "running") {
           sessionStartByAgentRef.current[agent.id] = Date.now();
         }
-        // agent 运行中，根据消息角色判断状态
-        const agentMessages = messagesByAgent[agent.id] || [];
-        if (agentMessages.length > 0) {
-          const lastMessage = agentMessages[agentMessages.length - 1];
-          if (lastMessage.role === "tool") {
-            setSnakeLogoState("working");
-          } else if (lastMessage.role === "system") {
-            setSnakeLogoState("thinking");
-          } else {
-            setSnakeLogoState("chatting");
-          }
-        } else {
-          setSnakeLogoState("executing");
-        }
-      } else if (agent.status === "idle") {
-        const start = sessionStartByAgentRef.current[agent.id];
-        if (start) {
-          setSessionDurationByAgent((d) => ({
-            ...d,
-            [agent.id]: Date.now() - start,
-          }));
-        }
-        setSnakeLogoState("idle");
-      } else if (agent.status === "starting") {
-        setSnakeLogoState("working");
-      } else {
-        setSnakeLogoState("idle");
       }
       agentStatusByAgentRef.current[agent.id] = agent.status;
     }
   }, [displayAgents, activeAgentId, modifiedFiles, messagesByAgent]);
-
-  /** 侧栏贪吃蛇 logo 业务反馈：新建/历史会话启动/关闭 agent 时更新状态。 */
-  const triggerBrandLogoReplay = useCallback(() => {
-    setSnakeLogoState("working");
-  }, []);
 
   // 已删除内置 goal 完成检测。
 
@@ -3014,10 +3000,10 @@ export function App() {
     setEnvironmentDialog(true);
     try {
       const next = await api.agentCli.check();
-      setPiStatus(next);
+      setAgentStatus(next);
       if (next.installed && source === "startup") {
         // 首次启动检测通过后落盘,后续启动不再阻塞/打扰;用户仍可在设置里手动重新检测。
-        const saved = await api.settings.update({ piEnvironmentChecked: true });
+        const saved = await api.settings.update({ sdEnvironmentChecked: true });
         setSettings(saved);
         window.setTimeout(() => setEnvironmentDialog(false), 3000);
       }
@@ -3028,25 +3014,25 @@ export function App() {
     }
   }
 
-  async function checkPiInstallInline() {
+  async function checkAgentInstallInline() {
     setPiChecking(true);
     setCustomPathResult(null);
     try {
       const next = await api.agentCli.check();
-      setPiStatus(next);
+      setAgentStatus(next);
       if (next.installed) {
-        const saved = await api.settings.update({ piEnvironmentChecked: true });
+        const saved = await api.settings.update({ sdEnvironmentChecked: true });
         setSettings(saved);
         showToast(
-          t("app.piCheckPassed", {
-            value: next.command ?? next.version ?? "pi",
+          t("app.sdCheckPassed", {
+            value: next.command ?? next.version ?? "sd",
           }),
         );
       } else {
         /* 检测失败时弹出环境检测弹框，方便用户查看安装指引 */
         setSettingsOpen(false);
         setEnvironmentDialog(true);
-        setPiStatus(next);
+        setAgentStatus(next);
       }
     } finally {
       setPiChecking(false);
@@ -3054,14 +3040,14 @@ export function App() {
   }
 
   /**
-   * 校验用户手动输入的 pi 路径。
-   * 主进程执行 command --version 验证后,通过则自动保存到 settings.customPiPath,
-   * 之后新建/重启 agent 时 PiProcess 会优先使用自定义路径。
+   * 校验用户手动输入的 sd 路径。
+   * 主进程执行 command --version 验证后,通过则自动保存到 settings.customSdPath,
+   * 之后新建/重启 agent 时 SdProcess 会优先使用自定义路径。
    */
-  async function validateCustomPiPath(
+  async function validateCustomAgentPath(
     options: { closeDialogOnSuccess?: boolean } = {},
   ) {
-    const path = customPiPath.trim();
+    const path = customSdPath.trim();
     if (!path) return;
     setCustomPathValidating(true);
     setCustomPathResult(null);
@@ -3069,14 +3055,14 @@ export function App() {
       const result = await api.agentCli.checkCustom(path);
       setCustomPathResult(result);
       if (result.installed) {
-        // 主进程会保存 PiLocator 归一化后的路径;这里重新读取,确保 UI 展示的是实际使用路径。
+        // 主进程会保存 SdLocator 归一化后的路径;这里重新读取,确保 UI 展示的是实际使用路径。
         const updated = await api.settings.get();
         setSettings(updated);
-        setCustomPiPath(updated.customPiPath ?? result.command ?? path);
-        setPiStatus(result);
+        setCustomAgentPath(updated.customSdPath ?? result.command ?? path);
+        setAgentStatus(result);
         showToast(
-          t("app.piPathSaved", {
-            path: result.command ?? updated.customPiPath ?? path,
+          t("app.sdPathSaved", {
+            path: result.command ?? updated.customSdPath ?? path,
           }),
         );
         if (options.closeDialogOnSuccess) {
@@ -3085,7 +3071,7 @@ export function App() {
         }
       } else {
         showToast(
-          t("app.piPathValidateFailed", {
+          t("app.sdPathValidateFailed", {
             error: result.error ?? t("environment.unableToRun"),
           }),
         );
@@ -3095,14 +3081,14 @@ export function App() {
     }
   }
 
-  async function clearCustomPiPath() {
-    const updated = await api.settings.update({ customPiPath: "" });
+  async function clearCustomAgentPath() {
+    const updated = await api.settings.update({ customSdPath: "" });
     setSettings(updated);
-    setCustomPiPath("");
+    setCustomAgentPath("");
     setCustomPathResult(null);
-    showToast(t("app.piPathCleared"));
+    showToast(t("app.sdPathCleared"));
     const status = await api.agentCli.check();
-    setPiStatus(status);
+    setAgentStatus(status);
   }
 
   /**
@@ -3180,14 +3166,14 @@ export function App() {
     await api.app.installUpdate(downloadedUpdatePath);
   }
 
-  async function checkPiCliUpdateOnStartup() {
+  async function checkAgentCliUpdateOnStartup() {
     if (settings.disableUpdateCheck) return;
     try {
       const result = await api.agentCli.checkUpdate();
-      setPiUpdateCheck(result);
+      setAgentUpdateCheck(result);
       if (result.hasUpdate) {
-        // 启动后后台提醒即可，不阻塞主界面；低版本 pi 可能缺少新版协议/工具能力。
-        const message = t("settings.piUpdateStartupNotice");
+        // 启动后后台提醒即可，不阻塞主界面；低版本 sd 可能缺少新版协议/工具能力。
+        const message = t("settings.sdUpdateStartupNotice");
         showToast(message, 6500);
       }
     } catch {
@@ -3195,31 +3181,31 @@ export function App() {
     }
   }
 
-  async function checkPiCliUpdate() {
+  async function checkAgentCliUpdate() {
     if (settings.disableUpdateCheck) return;
-    setPiUpdateChecking(true);
+    setAgentUpdateChecking(true);
     try {
       const result = await api.agentCli.checkUpdate();
-      setPiUpdateCheck(result);
-      showToast(result.error ? t("settings.piUpdateFailed", { error: result.error }) : result.hasUpdate ? t("settings.piUpdateAvailable") : t("settings.piUpdateChecked"));
+      setAgentUpdateCheck(result);
+      showToast(result.error ? t("settings.sdUpdateFailed", { error: result.error }) : result.hasUpdate ? t("settings.sdUpdateAvailable") : t("settings.sdUpdateChecked"));
     } finally {
-      setPiUpdateChecking(false);
+      setAgentUpdateChecking(false);
     }
   }
 
-  async function updatePiCli() {
-    setPiUpdating(true);
-    setPiUpdateResult(null);
+  async function updateAgentCli() {
+    setAgentUpdating(true);
+    setAgentUpdateResult(null);
     try {
       const result = await api.agentCli.update();
-      setPiUpdateResult(result);
-      await checkPiInstallInline();
-      setPiUpdateCheck(await api.agentCli.checkUpdate());
-      showToast(result.updated ? t("settings.piUpdateDone") : t("settings.piUpdateChecked"));
+      setAgentUpdateResult(result);
+      await checkAgentInstallInline();
+      setAgentUpdateCheck(await api.agentCli.checkUpdate());
+      showToast(result.updated ? t("settings.sdUpdateDone") : t("settings.sdUpdateChecked"));
     } catch (error) {
-      showToast(t("settings.piUpdateFailed", { error: error instanceof Error ? error.message : String(error) }));
+      showToast(t("settings.sdUpdateFailed", { error: error instanceof Error ? error.message : String(error) }));
     } finally {
-      setPiUpdating(false);
+      setAgentUpdating(false);
     }
   }
 
@@ -4068,8 +4054,6 @@ export function App() {
       autoScrollRef.current = true;
       return existing;
     }
-    // 新建 agent / 从历史会话恢复：点选当下就给品牌 logo 反馈，不必等进程真正 ready。
-    triggerBrandLogoReplay();
     const previousAgentId = activeAgentId;
     const pendingTab: PendingAgentTab = {
       id: `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -4215,7 +4199,7 @@ export function App() {
   	return sessionSourceFilter[projectId] ?? null;
   }
 
-  function toggleSessionSourceFilter(projectId: string, source: "pi" | "codex" | "claude" | "opencode") {
+  function toggleSessionSourceFilter(projectId: string, source: "sd" | "codex" | "claude" | "opencode") {
   	setSessionSourceFilter((current) => {
   		const prev = current[projectId] ?? null;
   		if (prev === null) {
@@ -4253,7 +4237,7 @@ export function App() {
   	};
   }
 
-  // 无 agent 时模型列表缓存，避免每次打开模型选择器都 fork pi --list-models
+  // 无 agent 时模型列表缓存，避免每次打开模型选择器都 fork sd --list-models
   const cachedModelsRef = useRef<AvailableModel[] | null>(null);
 
   async function openModelPicker() {
@@ -4264,7 +4248,7 @@ export function App() {
       setModelPickerOpen(true);
       return;
     }
-    // 无 agent → 优先用缓存，否则走 pi --list-models
+    // 无 agent → 优先用缓存，否则走 sd --list-models
     if (cachedModelsRef.current) {
       setAvailableModels(cachedModelsRef.current);
       setModelPickerOpen(true);
@@ -4300,7 +4284,7 @@ export function App() {
         const projectResult = await api.prompts.listByProject(activeProject.path);
         allTemplates.push(...projectResult.templates);
       } catch {
-        // 项目无 .pi/prompts/ 目录时静默跳过
+        // 项目无 .sd/prompts/ 目录时静默跳过
       }
     }
     setPromptTemplateList(allTemplates);
@@ -4314,7 +4298,7 @@ export function App() {
     content: string;
     argumentHint?: string;
   }) {
-    // 插入斜线命令形式，pi 会在发送时自动展开，末尾加空格分割后续输入
+    // 插入斜线命令形式，sd 会在发送时自动展开，末尾加空格分割后续输入
     setPrompt((prev) => {
       const trimmed = prev ? prev.trimEnd() : "";
       if (!trimmed) return "/" + template.name + " ";
@@ -4403,8 +4387,6 @@ export function App() {
 
   async function closeAgent(agentId: string) {
     if (isPendingAgentId(agentId)) return;
-    // 关闭当下重播 logo，与启动反馈对称。
-    triggerBrandLogoReplay();
     await api.agents.stop(agentId);
   }
 
@@ -4970,7 +4952,7 @@ export function App() {
     setSavedPrompt("");
 
     // 发送前先保留快照,再立即清空 composer;运行中发送会走官方 steer 队列,
-    // 由 pi runtime 保证在当前工具调用结束后、下一次 LLM 调用前注入。
+    // 由 sd runtime 保证在当前工具调用结束后、下一次 LLM 调用前注入。
     // 不论之前是否滚动回看，发新消息都强制自动滚到底，确保能看到 agent 的回答。
     setAutoScroll(true);
     autoScrollRef.current = true;
@@ -4995,8 +4977,8 @@ export function App() {
 
 
     // 在发送前本地展开 prompt template 命令（/name → 完整内容），
-    // 避免依赖 pi 的展开导致用户附加文本丢失以及特殊符号干扰
-    // 同时提取模板的 description 作为元数据发给 pi agent，让其了解本次 prompt 意图
+    // 避免依赖 sd 的展开导致用户附加文本丢失以及特殊符号干扰
+    // 同时提取模板的 description 作为元数据发给 sd agent，让其了解本次 prompt 意图
     const { message: expandedMessage, description: templateDescription } = expandPromptTemplates(message, promptTemplateList);
 
     const queuedPromptSnapshot: QueuedPrompt = {
@@ -5185,7 +5167,7 @@ export function App() {
         ...(streamingBehavior ? { streamingBehavior } : {}),
       });
     } catch (error) {
-      // IPC/fetch 在请求发出后断开时无法判断主进程是否已经提交给 pi；按未知处理，
+      // IPC/fetch 在请求发出后断开时无法判断主进程是否已经提交给 sd；按未知处理，
       // 绝不能把它降级为可重试失败，否则网络/IPC 抖动会造成重复发送。
       throw new PromptDeliveryUnknownError(
         error instanceof Error ? error.message : String(error),
@@ -5205,7 +5187,7 @@ export function App() {
     images?: ImageContent[],
     streamingBehavior?: "steer" | "followUp",
     agentMode: ComposerAgentMode = "normal",
-    /** prompt 模板匹配到的 description，作为元数据发给 pi agent 标识意图 */
+    /** prompt 模板匹配到的 description，作为元数据发给 sd agent 标识意图 */
     templateDescription?: string,
   ) {
     // 非队列入口继续保持原有行为：当前选中 agent 忙碌时默认 steer。
@@ -5322,7 +5304,7 @@ export function App() {
   }
 
   /**
-   * 处理图片文件,转为 pi RPC 可识别的 ImageContent。
+   * 处理图片文件,转为 sd RPC 可识别的 ImageContent。
    * 大图会压缩到最长边 2000px,避免 base64 过大导致 RPC 传输和模型上下文成本上升。
    */
   async function processImageFile(file: File): Promise<ImageContent | null> {
@@ -5453,7 +5435,7 @@ export function App() {
    */
   async function handleAttachFile() {
     try {
-      const paths = await window.piDesktop.dialog.pickFiles({
+      const paths = await window.snacodeDesktop.dialog.pickFiles({
         title: t("app.attachFile"),
       });
       if (paths.length === 0) return;
@@ -5487,7 +5469,7 @@ export function App() {
    */
   async function handleAttachImages() {
     try {
-      const images = await window.piDesktop.dialog.pickImages({
+      const images = await window.snacodeDesktop.dialog.pickImages({
         title: t("app.attachImage"),
       });
       if (images.length === 0) return;
@@ -5521,15 +5503,15 @@ export function App() {
       setSettings(next);
       let notice = t("app.settingsSaved");
       if (
-        "piProxyEnabled" in patch ||
-        "piProxyUrl" in patch ||
-        "piProxyBypass" in patch
+        "sdProxyEnabled" in patch ||
+        "sdProxyUrl" in patch ||
+        "sdProxyBypass" in patch
       ) {
-        notice = next.piProxyEnabled
+        notice = next.sdProxyEnabled
           ? t("app.shellProxySaved")
           : t("app.shellProxyDisabled");
-        setPiProxyNoticeTone("info");
-        setPiProxyNotice(next.piProxyEnabled ? t("app.shellProxySaved") : "");
+        setAgentProxyNoticeTone("info");
+        setAgentProxyNotice(next.sdProxyEnabled ? t("app.shellProxySaved") : "");
       }
       if (
         "desktopProxyEnabled" in patch ||
@@ -5555,9 +5537,9 @@ export function App() {
       if ("useNativeTitleBar" in patch) {
         notice = t("app.titleBarSaved");
       }
-      // WSL/Windows pi 源切换：重新检测 pi 环境、刷新项目和会话列表
+      // WSL/Windows sd 源切换：重新检测 sd 环境、刷新项目和会话列表
       if ("wslEnabled" in patch || "wslDistro" in patch || "wslUser" in patch) {
-        void api.agentCli.check().then((next) => setPiStatus(next)).catch(() => undefined);
+        void api.agentCli.check().then((next) => setAgentStatus(next)).catch(() => undefined);
         void api.agents.list().then(setAgents).catch(() => undefined);
         void api.projects.list().then(setProjects).catch(() => undefined);
         if (activeProjectId) {
@@ -5575,14 +5557,14 @@ export function App() {
     }
   }
 
-  async function testPiProxy() {
-    setPiProxyChecking(true);
-    setPiProxyNoticeTone("info");
-    setPiProxyNotice(t("app.proxyChecking"));
+  async function testAgentProxy() {
+    setAgentProxyChecking(true);
+    setAgentProxyNoticeTone("info");
+    setAgentProxyNotice(t("app.proxyChecking"));
     try {
-      const result = await api.settings.testPiProxy();
-      setPiProxyNoticeTone(result.success ? "success" : "error");
-      setPiProxyNotice(
+      const result = await api.settings.testAgentProxy();
+      setAgentProxyNoticeTone(result.success ? "success" : "error");
+      setAgentProxyNotice(
         result.success
           ? t("app.proxyAvailable", {
               message: result.message ?? t("app.proxyDefaultOk"),
@@ -5593,14 +5575,14 @@ export function App() {
             }),
       );
     } catch (error) {
-      setPiProxyNoticeTone("error");
-      setPiProxyNotice(
+      setAgentProxyNoticeTone("error");
+      setAgentProxyNotice(
         t("app.proxyCheckFailed", {
           error: error instanceof Error ? error.message : String(error),
         }),
       );
     } finally {
-      setPiProxyChecking(false);
+      setAgentProxyChecking(false);
     }
   }
 
@@ -6002,8 +5984,8 @@ export function App() {
         <div className="sidebar-body">
           <div className="list-toolbar">
           <div className="app-badge">
-            {/* 贪吃蛇动画标 + 字标；根据 agent 状态和消息类型动态变化 */}
-            <BrandLockup state={snakeLogoState} />
+            {/* Snacode logo + 字标 */}
+            <BrandLockup />
           </div>
         </div>
         <button
@@ -6059,7 +6041,7 @@ export function App() {
               	const filter = sessionSourceFilter[project.id] ?? null;
               	return filter === null
               		? true
-              		: filter.has(session.source ?? "pi");
+              		: filter.has(session.source ?? "sd");
               }));
             const visibleChildCount =
               visibleProjectChildCountByProject[project.id] ??
@@ -6272,7 +6254,7 @@ export function App() {
                     {projectDisplay.visibleChildren.map((child) => {
                     const subagentGroupKey = `${project.id}:${child.key}`;
                     const subagentsExpanded = expandedSubagentGroups.has(subagentGroupKey);
-                    const totalSubagentCount = (child.codexSubagents?.length ?? 0) + (child.piSubagents?.length ?? 0);
+                    const totalSubagentCount = (child.codexSubagents?.length ?? 0) + (child.sdSubagents?.length ?? 0);
                     const renderSubagentRow = (
                       subagent: SessionSummary,
                       label: ReactNode,
@@ -6289,7 +6271,7 @@ export function App() {
                           onContextMenu={async (event) => {
                             event.preventDefault();
                             if (subagentAgent) {
-                              const logging = await window.piDesktop.rpcLogs.getLogging(subagentAgent.id);
+                              const logging = await window.snacodeDesktop.rpcLogs.getLogging(subagentAgent.id);
                               setAgentRpcLogging((prev) => {
                                 const next = new Map(prev);
                                 next.set(subagentAgent.id, logging);
@@ -6340,7 +6322,7 @@ export function App() {
                         </div>
                       );
                     };
-                    const renderPiSubagents = (subagents: SessionSummary[]) => {
+                    const renderSdSubagents = (subagents: SessionSummary[]) => {
                       if (subagents.length === 0 || !subagentsExpanded) return null;
                       return (
                         <div className="codex-subagent-sidebar-group">
@@ -6363,7 +6345,7 @@ export function App() {
                             return next;
                           });
                         }}
-                        title={t("app.piSubagentCount", { count: totalSubagentCount })}
+                        title={t("app.sdSubagentCount", { count: totalSubagentCount })}
                       >
                         <ChevronDown size={10} className={subagentsExpanded ? "expanded" : ""} />
                         <span className="subagent-inline-count">{totalSubagentCount}</span>
@@ -6388,7 +6370,7 @@ export function App() {
                           onContextMenu={async (event) => {
                             event.preventDefault();
                             // 菜单打开时查询 RPC 日志记录状态
-                            const logging = await window.piDesktop.rpcLogs.getLogging(agent.id);
+                            const logging = await window.snacodeDesktop.rpcLogs.getLogging(agent.id);
                             setAgentRpcLogging((prev) => {
                               const next = new Map(prev);
                               next.set(agent.id, logging);
@@ -6414,7 +6396,7 @@ export function App() {
                                 </span>
                               )}
                               <strong>{agent.title}</strong>
-                              {child.source && child.source !== "pi" && (
+                              {child.source && child.source !== "sd" && (
                                 <span className={`session-source-badge ${child.source}`}>
                                   {t(`sessionSource.${child.source}` as any)}
                                 </span>
@@ -6424,7 +6406,7 @@ export function App() {
                           </div>
                         </button>
                         {renderCodexSubagents(child.codexSubagents)}
-                        {renderPiSubagents(child.piSubagents)}
+                        {renderSdSubagents(child.sdSubagents)}
                         </Fragment>
                       );
                     }
@@ -6457,7 +6439,7 @@ export function App() {
                             <strong title={session.name || t("common.untitled")}>
                               {session.name || t("common.untitled")}
                             </strong>
-                            {session.source && session.source !== "pi" && (
+                            {session.source && session.source !== "sd" && (
                               <span className={`session-source-badge ${session.source}`}>
                                 {t(`sessionSource.${session.source}` as any)}
                               </span>
@@ -6467,7 +6449,7 @@ export function App() {
                         </div>
                       </button>
                       {renderCodexSubagents(child.codexSubagents)}
-                      {renderPiSubagents(child.piSubagents)}
+                      {renderSdSubagents(child.sdSubagents)}
                       </Fragment>
                     );
                   })}
@@ -6602,7 +6584,7 @@ export function App() {
                           </button>
                           {wtChildren.filter(c => c.type === "agent").map((item) => {
                             const agent = item.agent;
-                            const totalSubagentCount = (item.codexSubagents?.length ?? 0) + (item.piSubagents?.length ?? 0);
+                            const totalSubagentCount = (item.codexSubagents?.length ?? 0) + (item.sdSubagents?.length ?? 0);
                             const subagentGroupKey = `wt:${childProject!.id}:${item.key}`;
                             const subagentExpanded = expandedSubagentGroups.has(subagentGroupKey);
                             return (
@@ -6616,7 +6598,7 @@ export function App() {
                                   }) ? " active" : ""}`}
                                   onContextMenu={async (event) => {
                                     event.preventDefault();
-                                    const logging = await window.piDesktop.rpcLogs.getLogging(agent.id);
+                                    const logging = await window.snacodeDesktop.rpcLogs.getLogging(agent.id);
                                     setAgentRpcLogging((prev) => { const next = new Map(prev); next.set(agent.id, logging); return next; });
                                     setAgentMenu({ x: event.clientX, y: event.clientY, agent });
                                   }}
@@ -6636,7 +6618,7 @@ export function App() {
                                         </span>
                                       )}
                                       {totalSubagentCount > 0 && (
-                                        <span className="subagent-inline-toggle" onClick={(e) => { e.stopPropagation(); setExpandedSubagentGroups(c => { const n = new Set(c); n.has(subagentGroupKey) ? n.delete(subagentGroupKey) : n.add(subagentGroupKey); return n; }); }} title={t("app.piSubagentCount", { count: totalSubagentCount })}>
+                                        <span className="subagent-inline-toggle" onClick={(e) => { e.stopPropagation(); setExpandedSubagentGroups(c => { const n = new Set(c); n.has(subagentGroupKey) ? n.delete(subagentGroupKey) : n.add(subagentGroupKey); return n; }); }} title={t("app.sdSubagentCount", { count: totalSubagentCount })}>
                                           <ChevronDown size={10} className={subagentExpanded ? "expanded" : ""} />
                                           <span className="subagent-inline-count">{totalSubagentCount}</span>
                                         </span>
@@ -6653,9 +6635,9 @@ export function App() {
                                     ))}
                                   </div>
                                 )}
-                                {subagentExpanded && item.piSubagents?.length > 0 && (
+                                {subagentExpanded && item.sdSubagents?.length > 0 && (
                                   <div className="codex-subagent-sidebar-group">
-                                    {item.piSubagents.map((sa) => (
+                                    {item.sdSubagents.map((sa) => (
                                       <button key={sa.filePath} className={`conversation agent-row session-row codex-subagent-sidebar-row${isSameSessionPath(sa.filePath, displayedSidebarSessionPath) ? " active" : ""}`} title={sa.filePath} onClick={() => void openSidebarSession(childProject!.id, sa)}>
                                         <div className="conversation-body"><div className="conversation-title"><strong>{formatPiSubagentName(sa)}</strong></div></div>
                                       </button>
@@ -6667,7 +6649,7 @@ export function App() {
                           })}
                           {wtChildren.filter(c => c.type === "session").map((item) => {
                             const session = item.session;
-                            const totalSubagentCount = (item.codexSubagents?.length ?? 0) + (item.piSubagents?.length ?? 0);
+                            const totalSubagentCount = (item.codexSubagents?.length ?? 0) + (item.sdSubagents?.length ?? 0);
                             const subagentGroupKey = `wt:${childProject!.id}:${item.key}`;
                             const subagentExpanded = expandedSubagentGroups.has(subagentGroupKey);
                             return (
@@ -6682,7 +6664,7 @@ export function App() {
                                     <div className="conversation-title">
                                       <strong title={session.name || t("common.untitled")}>{session.name || t("common.untitled")}</strong>
                                       {totalSubagentCount > 0 && (
-                                        <span className="subagent-inline-toggle" onClick={(e) => { e.stopPropagation(); setExpandedSubagentGroups(c => { const n = new Set(c); n.has(subagentGroupKey) ? n.delete(subagentGroupKey) : n.add(subagentGroupKey); return n; }); }} title={t("app.piSubagentCount", { count: totalSubagentCount })}>
+                                        <span className="subagent-inline-toggle" onClick={(e) => { e.stopPropagation(); setExpandedSubagentGroups(c => { const n = new Set(c); n.has(subagentGroupKey) ? n.delete(subagentGroupKey) : n.add(subagentGroupKey); return n; }); }} title={t("app.sdSubagentCount", { count: totalSubagentCount })}>
                                           <ChevronDown size={10} className={subagentExpanded ? "expanded" : ""} />
                                           <span className="subagent-inline-count">{totalSubagentCount}</span>
                                         </span>
@@ -6699,9 +6681,9 @@ export function App() {
                                     ))}
                                   </div>
                                 )}
-                                {subagentExpanded && item.piSubagents?.length > 0 && (
+                                {subagentExpanded && item.sdSubagents?.length > 0 && (
                                   <div className="codex-subagent-sidebar-group">
-                                    {item.piSubagents.map((sa) => (
+                                    {item.sdSubagents.map((sa) => (
                                       <button key={sa.filePath} className={`conversation agent-row session-row codex-subagent-sidebar-row${isSameSessionPath(sa.filePath, displayedSidebarSessionPath) ? " active" : ""}`} title={sa.filePath} onClick={() => void openSidebarSession(childProject!.id, sa)}>
                                         <div className="conversation-body"><div className="conversation-title"><strong>{formatPiSubagentName(sa)}</strong></div></div>
                                       </button>
@@ -7156,9 +7138,9 @@ export function App() {
                       <AskQuestionCard key={message.id} message={message} onRespond={(response) => {
                         const req = meta.uiRequest;
                         if (!req || !activeAgentId) return;
-                        // cancelled 通过 sendUiResponse 正常发送：pi 的 rpc-mode 对
+                        // cancelled 通过 sendUiResponse 正常发送：sd 的 rpc-mode 对
                         // select/input/editor 返回 undefined（卡片显示"已取消"），
-                        // confirm 返回 false（同"否"，pi 的 ctx.ui.confirm() 不区分取消和否）
+                        // confirm 返回 false（同"否"，sd 的 ctx.ui.confirm() 不区分取消和否）
                         if (response.cancelled) {
                           setCancellingUi(true);
                           api.agents.sendUiResponse(activeAgentId, req.requestId, response);
@@ -7436,7 +7418,7 @@ export function App() {
                       showToast(t("ask.cancelHint"));
                     }
                     if (activeUiAsk.requestId && activeAgentId) {
-                      /* 立即从本地 state 移除，同时通知 Pi */
+                      /* 立即从本地 state 移除，同时通知 Sd */
                       setActiveUiRequest((current) => {
                         if (!current) return null;
                         const next = { ...current };
@@ -7493,7 +7475,7 @@ export function App() {
                   </div>
                 ) : activeUiAsk.options && activeUiAsk.options.length > 0 ? (
                   <div className="ask-inline-bar-options">
-                    {/* 过滤掉 Pi 自带的 "✎ 自行输入..." 选项，用下方内联输入框替代 */}
+                    {/* 过滤掉 Sd 自带的 "✎ 自行输入..." 选项，用下方内联输入框替代 */}
                     {activeUiAsk.options.filter((opt) => {
                       const label = typeof opt === "string" ? opt : String((opt as any).label ?? opt);
                       return !label.startsWith("✎");
@@ -7540,7 +7522,7 @@ export function App() {
                                 if (Object.keys(next).length === 0) return null;
                                 return next;
                               });
-                              /* 保存自定义值到 ref，选择 "✎ 自行输入..." 让 Pi 走 input 流 */
+                              /* 保存自定义值到 ref，选择 "✎ 自行输入..." 让 Sd 走 input 流 */
                               pendingCustomInputRef.current = val;
                               api.agents.sendUiResponse(activeAgentId, activeUiAsk.requestId, { value: "✎ 自行输入..." });
                             }
@@ -7561,7 +7543,7 @@ export function App() {
                               if (Object.keys(next).length === 0) return null;
                               return next;
                             });
-                            /* 保存自定义值到 ref，选择 "✎ 自行输入..." 让 Pi 走 input 流 */
+                            /* 保存自定义值到 ref，选择 "✎ 自行输入..." 让 Sd 走 input 流 */
                             pendingCustomInputRef.current = val;
                             api.agents.sendUiResponse(activeAgentId, activeUiAsk.requestId, { value: "✎ 自行输入..." });
                           }
@@ -8203,8 +8185,8 @@ filePath={gitDrawerDiff.filePath}
               project={drawerContentPanel === "sessions" ? sessionsProject : undefined}
               files={files}
               sessions={(sessionsProjectId && sessionSourceFilter[sessionsProjectId]) ? sessions.filter(
-                (s) => !s.parentSessionPath && (sessionSourceFilter[sessionsProjectId]!)!.has(s.source ?? "pi"),
-              ).concat(sessions.filter(s => s.parentSessionPath && (sessionSourceFilter[sessionsProjectId]!)!.has(s.source ?? "pi"))) : sessions}
+                (s) => !s.parentSessionPath && (sessionSourceFilter[sessionsProjectId]!)!.has(s.source ?? "sd"),
+              ).concat(sessions.filter(s => s.parentSessionPath && (sessionSourceFilter[sessionsProjectId]!)!.has(s.source ?? "sd"))) : sessions}
               sessionsLoading={sessionHistoryLoading}
               expandedDirs={expandedDirs}
               onToggleDirectory={toggleDirectory}
@@ -8345,7 +8327,7 @@ filePath={gitDrawerDiff.filePath}
                 />
                 {t("menu.filterSourceAll")}
               </label>
-              {["pi", "codex", "claude", "opencode"].map((source) => (
+              {["sd", "codex", "claude", "opencode"].map((source) => (
                 <label key={source} className="filter-menu-item">
                   <input
                     type="checkbox"
@@ -8469,7 +8451,7 @@ filePath={gitDrawerDiff.filePath}
           onToggleRpcLogging={() => {
             const id = agentMenu.agent.id;
             const current = agentRpcLogging.get(id) ?? false;
-            void window.piDesktop.rpcLogs.setLogging(id, !current).then((enabled) => {
+            void window.snacodeDesktop.rpcLogs.setLogging(id, !current).then((enabled) => {
               setAgentRpcLogging((prev) => {
                 const next = new Map(prev);
                 next.set(id, enabled);
@@ -8488,7 +8470,7 @@ filePath={gitDrawerDiff.filePath}
           }}
           isRpcLogging={agentRpcLogging.get(agentMenu.agent.id) ?? false}
           onOpenLogFile={() => {
-            void window.piDesktop.rpcLogs.openFile(agentMenu.agent.id);
+            void window.snacodeDesktop.rpcLogs.openFile(agentMenu.agent.id);
             setAgentMenu(null);
           }}
           onCopySessionFilePath={() => {
@@ -8712,88 +8694,10 @@ filePath={gitDrawerDiff.filePath}
           onClose={() => setWorktreeCreateDialog(null)}
         />
       )}
-      {environmentDialog && (
-        <EnvironmentDialog
-          status={piStatus}
-          checking={piChecking}
-          onClose={() => {
-            setEnvironmentDialog(false);
-            setCustomPathResult(null);
-            // 关闭时重置安装状态
-            setInstallResult(null);
-            setInstallCompleted(false);
-            setNpmAvailable(null);
-          }}
-          onRecheck={() => {
-            setCustomPathResult(null);
-            setNpmAvailable(null);
-            setNpmVersion(undefined);
-            setInstallResult(null);
-            setInstallCompleted(false);
-            setInstallUseMirror(false);
-            checkPiInstall("manual");
-          }}
-          onOpenInstallDocs={() =>
-            api.app.openExternal(
-              "https://pi.dev/docs/latest/quickstart#install",
-            )
-          }
-          customPath={customPiPath}
-          customPathValidating={customPathValidating}
-          customPathResult={customPathResult}
-          onCustomPathChange={(path) => {
-            setCustomPiPath(path);
-            setCustomPathResult(null);
-          }}
-          onValidateCustomPath={() =>
-            validateCustomPiPath({ closeDialogOnSuccess: true })
-          }
-          npmAvailable={npmAvailable}
-          npmVersion={npmVersion}
-          npmChecking={npmChecking}
-          installCommand={installCommand}
-          installUseMirror={installUseMirror}
-          installExecuting={installExecuting}
-          installResult={installResult}
-          installCompleted={installCompleted}
-          onCheckNpm={checkNpm}
-          onInstallCommandChange={(cmd) => {
-            setInstallCommand(cmd);
-            setInstallResult(null);
-            setInstallCompleted(false);
-          }}
-          onToggleInstallMirror={() => {
-            setInstallUseMirror((prev) => {
-              // 切换镜像，同时更新命令文本
-              if (prev) {
-                // 移除镜像
-                setInstallCommand((cmd) =>
-                  cmd.replace(
-                    /\s+--registry=https:\/\/registry\.npmmirror\.com/g,
-                    "",
-                  ),
-                );
-              } else {
-                // 添加镜像
-                setInstallCommand((cmd) =>
-                  cmd.includes("--registry=")
-                    ? cmd
-                    : cmd + " --registry=https://registry.npmmirror.com",
-                );
-              }
-              return !prev;
-            });
-            setInstallResult(null);
-            setInstallCompleted(false);
-          }}
-          onExecInstall={execInstallCommand}
-          onRestartApp={() => api.app.restart()}
-          onClearCheckFlag={async () => {
-            await api.settings.update({ piEnvironmentChecked: false });
-            showToast(t("environment.checkFlagCleared"));
-          }}
-        />
-      )}
+      {/* sd CLI 已内置到项目中，无需环境检测弹窗 */}
+      {/* {environmentDialog && (
+        <EnvironmentDialog ... />
+      )} */}
       {promptTemplatePickerOpen && (
         <PromptTemplatePicker
           templates={promptTemplateList}
@@ -8836,32 +8740,32 @@ filePath={gitDrawerDiff.filePath}
         <Suspense fallback={null}>
         <SettingsModal
           settings={settings}
-          piStatus={piStatus}
-          piChecking={piChecking}
-          piProxyChecking={piProxyChecking}
-          piProxyNotice={piProxyNotice}
-          piProxyNoticeTone={piProxyNoticeTone}
+          agentStatus={agentStatus}
+          sdChecking={sdChecking}
+          agentProxyChecking={agentProxyChecking}
+          agentProxyNotice={agentProxyNotice}
+          agentProxyNoticeTone={agentProxyNoticeTone}
           webServiceChanging={webServiceChanging}
           appInfo={appInfo}
-          customPiPath={customPiPath}
+          customSdPath={customSdPath}
           customPathValidating={customPathValidating}
           customPathResult={customPathResult}
           updateChecking={updateChecking}
-          piUpdating={piUpdating}
-          piUpdateChecking={piUpdateChecking}
-          piUpdateCheck={piUpdateCheck}
-          piUpdateResult={piUpdateResult}
+          agentUpdating={agentUpdating}
+          sdUpdateChecking={sdUpdateChecking}
+          sdUpdateCheck={sdUpdateCheck}
+          sdUpdateResult={sdUpdateResult}
           onCustomPathChange={(path) => {
-            setCustomPiPath(path);
+            setCustomAgentPath(path);
             setCustomPathResult(null);
           }}
-          onValidateCustomPath={() => validateCustomPiPath()}
-          onClearCustomPath={clearCustomPiPath}
-          onCheckPi={checkPiInstallInline}
-          onTestPiProxy={() => testPiProxy()}
+          onValidateCustomPath={() => validateCustomAgentPath()}
+          onClearCustomPath={clearCustomAgentPath}
+          onCheckAgent={checkAgentInstallInline}
+          onTestAgentProxy={() => testAgentProxy()}
           onCheckUpdate={() => checkAppUpdate("manual")}
-          onCheckPiUpdate={checkPiCliUpdate}
-          onUpdatePi={updatePiCli}
+          onCheckAgentUpdate={checkAgentCliUpdate}
+          onUpdateAgent={updateAgentCli}
           onToggleDevTools={async () => {
             const opened = await api.app.toggleDevTools();
             showToast(
@@ -8870,7 +8774,7 @@ filePath={gitDrawerDiff.filePath}
           }}
           onRestartApp={() => api.app.restart()}
           onClearCheckFlag={async () => {
-            await api.settings.update({ piEnvironmentChecked: false });
+            await api.settings.update({ sdEnvironmentChecked: false });
             showToast(t("environment.checkFlagCleared"));
           }}
           onOpenWebService={(port) =>
@@ -9276,8 +9180,8 @@ function FeedbackModal({
   const issueTitle = descriptionSummary
     ? `${t("feedback.issueTitle")}${descriptionSummary}`
     : t("feedback.issueTitle") + t("feedback.issueTitleEmpty");
-  const issueUrl = `https://github.com/ayuayue/pi-desktop/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(report)}`;
-  const authorUrl = "https://github.com/ayuayue";
+  const issueUrl = `https://github.com/FrankieYuan8828/snacode/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(report)}`;
+  const authorUrl = "https://github.com/FrankieYuan8828";
 
   async function copyReport() {
     await navigator.clipboard.writeText(report);
@@ -9360,7 +9264,7 @@ function buildFeedbackReport(input: {
   fallbackVersion: string;
   environmentError: string;
 }) {
-  const pi = input.environment?.pi;
+  const sd = input.environment?.sd;
   const projectPath = input.project?.path
     ? maskHomePath(input.project.path)
     : t("feedback.report.projectNone");
@@ -9373,7 +9277,7 @@ function buildFeedbackReport(input: {
     input.steps.trim() || t("feedback.report.stepsEmpty"),
     "",
     t("feedback.report.environment"),
-    t("feedback.report.piDesktop", {
+    t("feedback.report.sdDesktop", {
       value: input.environment?.appVersion ?? input.fallbackVersion,
     }),
     t("feedback.report.system", {
@@ -9389,18 +9293,18 @@ function buildFeedbackReport(input: {
     }),
     t("feedback.report.node", { value: input.environment?.nodeVersion ?? "-" }),
     t("feedback.report.project", { value: projectPath }),
-    t("feedback.report.piStatus", {
-      value: pi
-        ? pi.installed
-          ? t("feedback.report.piDetected")
-          : t("feedback.report.piMissing")
+    t("feedback.report.sdStatus", {
+      value: sd
+        ? sd.installed
+          ? t("feedback.report.sdDetected")
+          : t("feedback.report.sdMissing")
         : t("feedback.report.readFailed"),
     }),
     t("feedback.report.piCommand", {
-      value: pi?.command ? maskHomePath(pi.command) : "-",
+      value: sd?.command ? maskHomePath(sd.command) : "-",
     }),
-    t("feedback.report.piVersion", { value: pi?.version || "-" }),
-    ...(pi?.error ? [t("feedback.report.piError", { value: pi.error })] : []),
+    t("feedback.report.sdVersion", { value: sd?.version || "-" }),
+    ...(sd?.error ? [t("feedback.report.piError", { value: sd.error })] : []),
     ...(input.environmentError
       ? [
           t("feedback.report.environmentError", {

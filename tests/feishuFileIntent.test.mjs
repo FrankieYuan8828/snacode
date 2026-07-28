@@ -38,11 +38,11 @@ test("detects Chinese request to send a workspace file", () => {
 
 test("detects html file send request", () => {
 	const dir = mkdtempSync(join(tmpdir(), "feishu-file-intent-"));
-	const fp = join(dir, "Pi-Agent-整修计划.html");
+	const fp = join(dir, "Snacode-Agent-整修计划.html");
 	writeFileSync(fp, "html");
 	const { resolveFeishuFileSendIntent } = loadFileIntentModule();
 
-	assert.equal(resolveFeishuFileSendIntent("Pi-Agent-整修计划.html这个文件发我", dir), fp);
+	assert.equal(resolveFeishuFileSendIntent("Snacode-Agent-整修计划.html这个文件发我", dir), fp);
 });
 
 test("requires explicit send intent before executing agent file markers", () => {
