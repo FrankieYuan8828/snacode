@@ -81,4 +81,4 @@ Snacode 默认发送匿名、低频的 `app_heartbeat` 使用统计，用于了�
 ## 遇到问题怎么办？
 
 - 查看 [GitHub Issues](https://github.com/FrankieYuan8828/snacode/issues)
-- 加入 **QQ 群：1026218644** 进行交流
+- 加入 **Snacode：(https://github.com/FrankieYuan8828/snacode)** 进行交流
