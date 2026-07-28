@@ -12,7 +12,7 @@ Snacode 提供图形化配置入口，减少频繁查找和编辑 sd 配置文�
 - 源文件：查看和编辑原始 JSON。
 - Skills：管理全局 Skills。
 
-<img class="doc-screenshot" src="/images/config.png" alt="配置管理界面">
+<div class="screenshot-placeholder">📸 截图即将更新</div>
 
 ## sd 路径
 

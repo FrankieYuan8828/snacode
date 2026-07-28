@@ -9,7 +9,7 @@ Snacode 的核心目标是把多个本地 sd Agent 会话收拢到一个稳定�
 - 项目之间通过独立 cwd 和独立 sd RPC 进程隔离。
 - 项目列表顶部提供内置 Chat 入口，适合不绑定代码目录的通用对话。
 
-<img class="doc-screenshot" src="/images/overview.png" alt="工作区与对话界面">
+<div class="screenshot-placeholder">📸 截图即将更新</div>
 
 ## 会话管理
 
@@ -26,7 +26,7 @@ Snacode 的核心目标是把多个本地 sd Agent 会话收拢到一个稳定�
 - `!command` 和 `!!command` 可在聊天输入框中执行 Shell 命令。
 - 方向键可在合适的光标位置复用历史输入。
 
-<img class="doc-screenshot" src="/images/slash-commands.png" alt="斜线命令和历史会话">
+<div class="screenshot-placeholder">📸 截图即将更新</div>
 
 ## 文件与 Git
 
@@ -35,7 +35,7 @@ Snacode 的核心目标是把多个本地 sd Agent 会话收拢到一个稳定�
 - 右键菜单支持打开文件、在系统文件管理器中定位文件。
 - 顶部显示当前 Git 分支，并支持本地与远程分支切换。
 
-<img class="doc-screenshot" src="/images/files.png" alt="文件树与会话操作">
+<div class="screenshot-placeholder">📸 截图即将更新</div>
 
 ## 工具调用展示
 
@@ -65,4 +65,4 @@ Windows 下编辑器检测会依次尝试 PATH、常见安装目录、Windows �
 
 当前 Agent 可以绑定独立终端 tab，支持 PowerShell、cmd、sh fallback、多 tab、主题切换、拖拽高度、右键复制选区和关闭确认。
 
-<img class="doc-screenshot" src="/images/terminal.png" alt="终端 Dock 界面">
+<div class="screenshot-placeholder">📸 截图即将更新</div>

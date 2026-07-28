@@ -1,4 +1,4 @@
-﻿---
+---
 layout: home
 
 hero:
@@ -38,7 +38,9 @@ features:
 ---
 
 <figure class="home-showcase">
-  <img src="/images/overview.png" alt="Snacode 工作区与对话界面截图">
+  <div class="screenshot-placeholder">
+    <span>📸 截图即将更新</span>
+  </div>
   <figcaption>工作区、会话、文件抽屉、Git 分支和工具调用集中在同一个桌面窗口中。</figcaption>
 </figure>
 
@@ -65,22 +67,22 @@ features:
 
 <div class="screenshot-grid">
   <div class="screenshot-card">
-    <img src="/images/config.png" alt="配置管理界面">
+    <div class="screenshot-placeholder"><span>📸 即将更新</span></div>
     <strong>配置管理</strong>
     <span>可视化编辑模型、认证、设置和 Skills。</span>
   </div>
   <div class="screenshot-card">
-    <img src="/images/slash-commands.png" alt="斜线命令与会话历史">
+    <div class="screenshot-placeholder"><span>📸 即将更新</span></div>
     <strong>命令与历史</strong>
     <span>内置斜线命令建议，快速恢复历史会话。</span>
   </div>
   <div class="screenshot-card">
-    <img src="/images/files.png" alt="文件树与会话操作">
+    <div class="screenshot-placeholder"><span>📸 即将更新</span></div>
     <strong>文件抽屉</strong>
     <span>查看项目文件、Git 状态和本次会话修改。</span>
   </div>
   <div class="screenshot-card">
-    <img src="/images/terminal.png" alt="终端 Dock 界面">
+    <div class="screenshot-placeholder"><span>📸 即将更新</span></div>
     <strong>终端 Dock</strong>
     <span>为当前 Agent 保留独立终端 tab。</span>
   </div>

@@ -126,6 +126,22 @@
   box-shadow: 0 22px 60px rgba(20, 33, 31, 0.16);
 }
 
+/* 截图占位符 */
+.screenshot-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 180px;
+  border: 2px dashed var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-text-2);
+  font-size: 16px;
+  font-family: var(--Snacode-font-brand);
+  margin: 16px 0;
+}
+
 .home-showcase figcaption {
   margin-top: 14px;
   color: var(--vp-c-text-2);
