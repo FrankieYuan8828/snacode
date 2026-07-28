@@ -1,0 +1,35 @@
+
+> snacode@1.0.0 dev
+> node scripts/dev.js
+
+[36mvite v7.3.5 [32mbuilding ssr environment for development...[36m[39m
+transforming...
+[32m✓[39m 59 modules transformed.
+rendering chunks...
+[2mout/main/[22m[32mchunks/icon-D9uVccZj.png  [39m[1m[2m 23.85 kB[22m[1m[22m
+[2mout/main/[22m[36mindex.js                  [39m[1m[33m758.16 kB[39m[22m
+[32m✓ built in 644ms[39m
+[32m
+build the electron main process successfully[39m
+[90m
+-----
+[39m
+[36mvite v7.3.5 [32mbuilding ssr environment for development...[36m[39m
+transforming...
+[32m✓[39m 2 modules transformed.
+rendering chunks...
+[2mout/preload/[22m[36mindex.js  [39m[1m[2m44.76 kB[22m[1m[22m
+[32m✓ built in 21ms[39m
+[32m
+build the electron preload files successfully[39m
+[90m
+-----
+[39m
+[2m09:52:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+[32mdev server running for the electron renderer process at:
+[39m
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5181[22m/[39m
+[32m
+start electron app...
+[39m
+
